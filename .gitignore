@@ -1,0 +1,48 @@
+# Xcode
+DerivedData/
+build/
+*.xcworkspace/xcuserdata/
+xcuserdata/
+*.xcuserstate
+*.moved-aside
+*.xcscmblueprint
+
+# SwiftPM
+.swiftpm/
+.build/
+Package.resolved
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/Build/
+
+# Fastlane
+deliver/
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# General
+.DS_Store
+*.swp
+*.orig
+
+# Archives
+*.xcarchive
+
+# Provisioning
+*.mobileprovision
+*.provisionprofile
+
+# Symbolication
+*.dSYM.zip
+*.dSYM
+
+# Logs
+*.log
+
+# Temporary
+*.tmp
