@@ -21,9 +21,10 @@ enum InjectionPeriod: String, CaseIterable, Codable, Identifiable {
 
 struct InjectionAction: Identifiable, Codable {
     let id: UUID
-    let date: Date
-    let period: InjectionPeriod
-    let dose: Double
+    var date: Date
+    var period: InjectionPeriod
+    var dose: Double
+    var deletedAt: Date? = nil // soft delete timestamp
 }
 
 struct RegisteredActivity: Identifiable, Codable {
@@ -34,8 +35,9 @@ struct RegisteredActivity: Identifiable, Codable {
 
 struct ActivityAction: Identifiable, Codable {
     let id: UUID
-    let date: Date
-    let activityId: UUID
+    var date: Date
+    var activityId: UUID
+    var deletedAt: Date? = nil // soft delete timestamp
 }
 
 struct Activity: Identifiable, Codable {
@@ -43,6 +45,7 @@ struct Activity: Identifiable, Codable {
     var title: String
     var averageEffect: Int
     var createdAt: Date?
+    var deletedAt: Date? = nil // soft delete timestamp (legacy ad-hoc)
 }
 
 struct UnifiedAction: Identifiable {
@@ -52,6 +55,7 @@ struct UnifiedAction: Identifiable {
     let tint: Color
     let primaryLine: String
     let secondaryLine: String
+    let isDeleted: Bool // new flag for soft delete state
 }
 
 // Constants

@@ -5,6 +5,7 @@ struct ContentView: View {
     @AppStorage("weight") private var weight: String = ""
     @AppStorage("sensitivity") private var sensitivityStorage: String = "medium"
     @AppStorage("target") private var targetStorage: String = "110"
+    @AppStorage("nightDose") private var nightDoseSetting: Int = 10 // new: night insulin preset
     
     // Inputs
     @State private var sugarLevel: String = ""
@@ -92,11 +93,12 @@ struct ContentView: View {
     @State private var newRegisteredActivityTitle: String = ""
     @State private var newRegisteredActivityEffect: Int? = nil
     @State private var editingRegisteredActivityIndex: Int? = nil
-    private let registeredActivitiesStorageKey = "RegisteredActivities.v1"
-    private let activityActionsStorageKey = "ActivityActions.v1"
     
     // NEW: drives programmatic navigation to SettingsView
     @State private var showSettings: Bool = false
+    // Deletion confirmation state
+    @State private var showDeleteConfirm: Bool = false
+    @State private var pendingDeleteId: String? = nil
     
     // Replace body with simpler wrapper referencing extracted rootContent
     var body: some View {
@@ -130,18 +132,41 @@ struct ContentView: View {
                 if let g = newValue?.glucose { sugarLevel = formatNumber(g) }
                 updateInjectionDoseIfNeeded()
             }
+            // NEW: when user switches injection period to nighttime, auto-fill with nightDose setting
+            .onChange(of: injectionPeriod) { _, newValue in
+                guard showInjectionSheet else { return }
+                if newValue == .nighttime {
+                    let preset = Double(nightDoseSetting)
+                    let clamped = clampDose(preset, minValue: injectionMinDose, maxValue: injectionMaxDose)
+                    injectionDose = clamped
+                    injectionDoseWasManuallyChanged = true // prevent auto overrides
+                } else if newValue == .daytime {
+                    // Set back to recommended dose when returning to daytime
+                    if let rec = recommendedDose {
+                        let clamped = clampDose(rec, minValue: injectionMinDose, maxValue: injectionMaxDose)
+                        injectionDose = clamped
+                        injectionDoseWasManuallyChanged = true // treat as user-directed context change
+                    } else {
+                        // If no recommendation, keep current dose but ensure within bounds
+                        injectionDose = clampDose(injectionDose, minValue: injectionMinDose, maxValue: injectionMaxDose)
+                    }
+                }
+            }
             .sheet(isPresented: $showInjectionSheet) { injectionSheet }
             .sheet(isPresented: $showActivitySheet) { activitySheet }
             .sheet(isPresented: $showRegisteredActivitiesSheet) { registeredActivitiesSheet }
             .sheet(isPresented: $showRegisteredActivityPicker) { registeredActivityPickerSheet }
             .confirmationDialog("დამატება", isPresented: $showActionChooser, titleVisibility: .visible) {
                 Button("ინექცია") { prepareInjectionSheet() }
-                Button("აქტივობა") { beginAddActivity() }
-                Button("რეგისტრირებული აქტივობა") { beginAddRegisteredActivityAction() }
+                Button("აქტივობა") { beginAddRegisteredActivityAction() }
                 Button("გაუქმება", role: .cancel) {}
             }
-            // Replaced deprecated hidden NavigationLink with navigationDestination
-            .navigationDestination(isPresented: $showSettings) { SettingsView() }
+            // Delete confirmation
+            .confirmationDialog("ნამდვილად გსურთ ჩანაწერის წაშლა?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+                Button("წაშლა", role: .destructive) { performDeletion() }
+                Button("გაუქმება", role: .cancel) { pendingDeleteId = nil }
+            }
+            .navigationDestination(isPresented: $showSettings) { GeneralSettingsView() }
     }
     
     private var mainVStack: some View {
@@ -202,14 +227,22 @@ struct ContentView: View {
             Text("მგრძნობიარობა: \(sensitivity.rawValue)").font(.subheadline).foregroundColor(.secondary)
             VStack(alignment: .leading, spacing: 4) {
                 Text("შაქრის დონე")
-                TextField("მმოლ/ლ", text: $sugarLevel)
-                    .keyboardType(.decimalPad)
-                    .focused($sugarFieldFocused)
-                    .font(.system(size: 26, weight: .semibold))
-                    .padding(.vertical, 6)
-                    .foregroundColor(sugarLevelColor)
-                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(sugarLevel.isEmpty ? Color.secondary.opacity(0.3) : sugarLevelColor, lineWidth: 2))
-                    .textFieldStyle(.roundedBorder)
+                GeometryReader { geo in
+                    TextField("მმოლ/ლ", text: $sugarLevel)
+                        .keyboardType(.decimalPad)
+                        .focused($sugarFieldFocused)
+                        .font(.system(size: 18, weight: .semibold))
+                        .padding(.vertical, 3)
+                        .padding(.horizontal, 4)
+                        .frame(width: geo.size.width * 0.9, alignment: .leading)
+                        .foregroundColor(sugarLevelColor)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(sugarLevel.isEmpty ? Color.secondary.opacity(0.3) : sugarLevelColor, lineWidth: 1)
+                        )
+                        .textFieldStyle(.roundedBorder)
+                }
+                .frame(height: 52) // fixed height so GeometryReader has layout
             }
         }
     }
@@ -246,20 +279,47 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             let combined = buildUnifiedActions()
             if !combined.isEmpty {
-                Text("მოქმედებები").font(.headline)
+                Text("ისტორია").font(.headline)
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach(combined) { item in
                         HStack(alignment: .top, spacing: 10) {
-                            Image(systemName: item.icon).foregroundColor(item.tint).font(.system(size: 20))
+                            Image(systemName: item.icon)
+                                .foregroundColor(item.isDeleted ? .gray : item.tint)
+                                .font(.system(size: 20))
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(item.primaryLine).font(.subheadline).fontWeight(.semibold)
-                                Text(item.secondaryLine).font(.caption).foregroundColor(.secondary)
+                                HStack(spacing: 6) {
+                                    Text(item.primaryLine)
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .strikethrough(item.isDeleted, color: .gray)
+                                    if item.isDeleted {
+                                        Text("(წაშლილია)")
+                                            .font(.caption2)
+                                            .foregroundColor(.gray)
+                                    }
+                                }
+                                Text(item.secondaryLine)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
                             }
                             Spacer()
+                            if item.isDeleted {
+                                Button("აღდგენა") { restoreUnified(id: item.id) }
+                                    .font(.caption)
+                            }
                         }
                         .padding(8)
-                        .background(Color.secondary.opacity(0.07))
+                        .background(Color.secondary.opacity(0.05))
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .opacity(item.isDeleted ? 0.45 : 1.0)
+                        .contextMenu {
+                            if item.isDeleted {
+                                Button { restoreUnified(id: item.id) } label: { Label("აღდგენა", systemImage: "arrow.uturn.backward") }
+                            } else {
+                                Button(role: .destructive) { requestDeletion(item.id) } label: { Label("წაშლა", systemImage: "trash") }
+                            }
+                        }
+                        .onLongPressGesture { if !item.isDeleted { requestDeletion(item.id) } }
                     }
                 }
             }
@@ -270,19 +330,18 @@ struct ContentView: View {
     private func buildUnifiedActions() -> [UnifiedAction] {
         var unified: [UnifiedAction] = []
         unified.reserveCapacity(injectionActions.count + activities.count + activityActions.count)
-        // Injections
-        for inj in injectionActions {
+        for inj in injectionActions { // include deleted
             unified.append(UnifiedAction(
                 id: "inj-" + inj.id.uuidString,
                 date: inj.date,
                 icon: "syringe",
                 tint: inj.period == .daytime ? .orange : .indigo,
                 primaryLine: "ინექცია • " + formatNumber(inj.dose) + " ერთ",
-                secondaryLine: inj.period.display + " • " + formatDate(inj.date)
+                secondaryLine: inj.period.display + " • " + formatDate(inj.date),
+                isDeleted: inj.deletedAt != nil
             ))
         }
-        // Ad-hoc activities
-        for act in activities {
+        for act in activities { // legacy ad-hoc
             let date = act.createdAt ?? Date.distantPast
             let tint = effectColor(act.averageEffect)
             let effectString = (act.averageEffect > 0 ? "+" : "") + String(act.averageEffect)
@@ -292,10 +351,10 @@ struct ContentView: View {
                 icon: act.averageEffect > 0 ? "arrow.up.circle" : (act.averageEffect < 0 ? "arrow.down.circle" : "circle"),
                 tint: tint,
                 primaryLine: act.title + " • " + effectString,
-                secondaryLine: formatDate(date)
+                secondaryLine: formatDate(date),
+                isDeleted: act.deletedAt != nil
             ))
         }
-        // Pre-registered activity actions
         for action in activityActions {
             if let act = registeredActivities.first(where: { $0.id == action.activityId }) {
                 let tint = effectColor(act.averageEffect)
@@ -306,7 +365,8 @@ struct ContentView: View {
                     icon: act.averageEffect > 0 ? "arrow.up.circle" : (act.averageEffect < 0 ? "arrow.down.circle" : "circle"),
                     tint: tint,
                     primaryLine: act.title + " • " + effectString,
-                    secondaryLine: formatDate(action.date)
+                    secondaryLine: formatDate(action.date),
+                    isDeleted: action.deletedAt != nil
                 ))
             }
         }
@@ -454,27 +514,24 @@ struct ContentView: View {
     private var registeredActivityPickerSheet: some View {
         NavigationStack {
             Form {
-                Section(header: Text("აირჩიეთ აქტივობა")) {
-                    if registeredActivities.isEmpty {
-                        Text("ჯერ არ არის რეგისტრირებული აქტივობები").foregroundColor(.secondary)
-                    } else {
-                        ForEach(registeredActivities) { act in
-                            Button {
-                                selectedRegisteredActivityId = act.id
-                                saveRegisteredActivityAction()
-                            } label: {
-                                HStack {
-                                    Text(act.title)
-                                    Spacer()
-                                    Text((act.averageEffect > 0 ? "+" : "") + String(act.averageEffect))
-                                        .foregroundColor(effectColor(act.averageEffect))
-                                }
+                if registeredActivities.isEmpty {
+                    Text("ჯერ არ არის რეგისტრირებული აქტივობები").foregroundColor(.secondary)
+                } else {
+                    ForEach(registeredActivities) { act in
+                        Button {
+                            selectedRegisteredActivityId = act.id
+                            saveRegisteredActivityAction()
+                        } label: {
+                            HStack {
+                                Text(act.title)
+                                Spacer()
+                                Text((act.averageEffect > 0 ? "+" : "") + String(act.averageEffect))
+                                    .foregroundColor(effectColor(act.averageEffect))
                             }
                         }
                     }
                 }
             }
-            .navigationTitle("აქტივობის დამატება")
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("დახურვა") { showRegisteredActivityPicker = false } } }
         }
     }
@@ -529,7 +586,7 @@ struct ContentView: View {
         injectionDoseWasManuallyChanged = false
         let start = recommendedDose ?? injectionMinDose
         injectionDose = clampDose(start, minValue: injectionMinDose, maxValue: injectionMaxDose)
-        injectionPeriod = .daytime
+        injectionPeriod = .daytime // default to daytime; nighttime choice will override dose via onChange
         showInjectionSheet = true
     }
     private func decrementDose() { guard canDecrementDose else { return }; injectionDoseWasManuallyChanged = true; injectionDose = clampDose(injectionDose - doseStep, minValue: injectionMinDose, maxValue: injectionMaxDose) }
@@ -563,4 +620,56 @@ struct ContentView: View {
             if let e = nfcManager.errorMessage { Text(e).font(.caption).foregroundColor(.red) }
         }
     }
+    
+    // MARK: - Deletion
+    private func requestDeletion(_ unifiedId: String) { pendingDeleteId = unifiedId; showDeleteConfirm = true }
+    private func performDeletion() {
+        guard let id = pendingDeleteId else { return }
+        defer { pendingDeleteId = nil }
+        let now = Date()
+        if id.hasPrefix("inj-") {
+            let uuidString = String(id.dropFirst(4))
+            if let uuid = UUID(uuidString: uuidString), let idx = injectionActions.firstIndex(where: { $0.id == uuid }) {
+                if injectionActions[idx].deletedAt == nil { injectionActions[idx].deletedAt = now }
+                persistInjectionActions(injectionActions, key: injectionStorageKey)
+            }
+        } else if id.hasPrefix("regact-") {
+            let uuidString = String(id.dropFirst(7))
+            if let uuid = UUID(uuidString: uuidString), let idx = activityActions.firstIndex(where: { $0.id == uuid }) {
+                if activityActions[idx].deletedAt == nil { activityActions[idx].deletedAt = now }
+                persistActivityActions(activityActions, key: activityActionsStorageKey)
+            }
+        } else if id.hasPrefix("act-") {
+            let uuidString = String(id.dropFirst(4))
+            if let uuid = UUID(uuidString: uuidString), let idx = activities.firstIndex(where: { $0.id == uuid }) {
+                if activities[idx].deletedAt == nil { activities[idx].deletedAt = now }
+                persistActivities(activities, key: activitiesStorageKey)
+            }
+        }
+    }
+    private func restoreUnified(id: String) {
+        if id.hasPrefix("inj-") {
+            let uuidString = String(id.dropFirst(4))
+            if let uuid = UUID(uuidString: uuidString), let idx = injectionActions.firstIndex(where: { $0.id == uuid }) {
+                injectionActions[idx].deletedAt = nil
+                persistInjectionActions(injectionActions, key: injectionStorageKey)
+            }
+        } else if id.hasPrefix("regact-") {
+            let uuidString = String(id.dropFirst(7))
+            if let uuid = UUID(uuidString: uuidString), let idx = activityActions.firstIndex(where: { $0.id == uuid }) {
+                activityActions[idx].deletedAt = nil
+                persistActivityActions(activityActions, key: activityActionsStorageKey)
+            }
+        } else if id.hasPrefix("act-") {
+            let uuidString = String(id.dropFirst(4))
+            if let uuid = UUID(uuidString: uuidString), let idx = activities.firstIndex(where: { $0.id == uuid }) {
+                activities[idx].deletedAt = nil
+                persistActivities(activities, key: activitiesStorageKey)
+            }
+        }
+    }
 }
+
+// Remove obsolete soft delete helper types since undo mechanism removed
+// private struct DeletedRecord { let type: DeletedType; let id: UUID }
+// private enum DeletedType { case injection, activityAction, legacyActivity }

@@ -1,6 +1,6 @@
 # Ubiquitous Language Glossary (InsCounter)
 
-Last updated: 2025-09-11
+Last updated: 2025-09-12
 
 ## Core Physiological Concepts
 - Sugar Level (შაქრის დონე): Current blood glucose entered manually or from NFC sensor (mmol/L).
@@ -37,8 +37,8 @@ Last updated: 2025-09-11
 - Registered Activity Action: Instance of usage { id, date, activityId } referencing a Registered Activity; added to actions timeline when selected.
 
 ## Unified Actions
-- Unified Action (მოქმედება): Normalized representation of any timeline item (Injection, Ad‑hoc Activity, Registered Activity Action) with fields { id, date, icon, tint, primaryLine, secondaryLine }.
-- Ordering: All actions merged and sorted descending by date to form the main actions list (latest first).
+- Unified Action (ისტორიის ჩანაწერი): Normalized representation of any timeline item (Injection, Ad‑hoc Activity, Registered Activity Action) with fields { id, date, icon, tint, primaryLine, secondaryLine }.
+- Ordering: All items merged and sorted descending by date to form the unified history list (latest first).
 
 ## NFC / Sensor
 - NFC Sensor (NFC სენსორი): UI section enabling FreeStyle Libre–style scan.
@@ -72,29 +72,7 @@ Last updated: 2025-09-11
 - დასახელება: Activity title field placeholder.
 - საშალო გავლენა: Average effect picker header.
 - აქტივობები ჯერ არ არის: Empty registered activities list placeholder.
-- მოქმედებები: Unified actions list header.
-
-## Formatting Helpers
-- formatNumber: Localized numeric string (comma decimal separator, <=1 fractional digit).
-- formatDate: Georgian locale short date & time.
-- formatEffect: Adds plus sign to positive average effect values.
-- effectColor: Color mapping (negative → red, positive → green, zero → gray).
-
-## Dose Calculation Summary
-1. Parse inputs (weight, sugar level, trend, sensitivity, target).
-2. Predicted Glucose = Sugar Level + Trend Prediction Delta.
-3. If Predicted Glucose ≤ Target → Recommended Dose = 0.
-4. dailyDose = weight * sensitivity.factor.
-5. ISF = 1800 / dailyDose.
-6. Raw Dose = (Predicted Glucose − Target) / ISF.
-7. Round Raw Dose to nearest 0.5, clamp ≥ 0 → Recommended Dose.
-
-## Design Intent & Future Extension Hooks
-- Trend.predictionDelta: Simple discrete proxy for glucose velocity; can be replaced with real CGM slope.
-- Sensitivity.factor: Tunable constants; evolve into personalized algorithm.
-- Average Effect values: Placeholder qualitative scale; future integration into predictive dosing.
-- LibreSensorDecoder: Replace stub with full sensor memory frame parsing (history & trend blocks).
-- Unified Action layer: Allows later enrichment (e.g., carbs, corrections, sensor calibrations) without changing UI rendering logic.
+- ისტორია: Unified history list header (was მოქმედებები).
 
 ## Suggested Short Prompt Handles
 - current_glucose → Sugar Level
@@ -107,7 +85,7 @@ Last updated: 2025-09-11
 - injection_log → Injection Actions
 - registered_activity → Registered Activity
 - registered_activity_action → Registered Activity Action
-- unified_actions → Actions list
+- unified_history → History list
 - nfc_reading → Last Reading
 
 ## Assumptions
@@ -116,5 +94,6 @@ Last updated: 2025-09-11
 - Activity/Registered Activity effects presently informational (no algorithmic adjustment to dose yet).
 
 ## Change Log
+- 2025-09-12: Renamed actions list label from მოქმედებები to ისტორია (History) across UI & glossary.
 - 2025-09-11: Added pre‑registered activities, registered activity actions, unified actions list, stepper injection dose UI, updated persistence keys, clarified naming inconsistencies.
 - 2025-09-09: Initial glossary extracted from codebase components.

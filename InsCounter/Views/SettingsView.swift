@@ -4,6 +4,7 @@ struct GeneralSettingsView: View { // renamed from SettingsView
     @AppStorage("weight") private var weight: String = ""
     @AppStorage("sensitivity") private var sensitivityStorage: String = "medium"
     @AppStorage("target") private var targetStorage: String = "110" // added target
+    @AppStorage("nightDose") private var nightDose: Int = 10 // ღამის ნემსის დოზა (1-99)
 
     var body: some View {
         Form {
@@ -16,6 +17,17 @@ struct GeneralSettingsView: View { // renamed from SettingsView
                         .keyboardType(.decimalPad)
                         .frame(maxWidth: 160)
                 }
+                // Night dose integer stepper (no keyboard)
+                Stepper(value: $nightDose, in: 1...99) {
+                    HStack {
+                        Text("ღამის ნემსის დოზა")
+                        Spacer()
+                        Text("\(nightDose)")
+                            .monospacedDigit()
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .accessibilityLabel("ღამის ნემსის დოზა")
                 // Target input
                 HStack {
                     Text("სამიზნე")
@@ -34,8 +46,13 @@ struct GeneralSettingsView: View { // renamed from SettingsView
             }
         }
         .navigationTitle("პარამეტრები") // changed from "General"
-        .onAppear { ensureDefaultTarget() }
+        .onAppear { ensureDefaultTarget(); normalizeNightDose() }
         .onChange(of: targetStorage) { oldValue, _ in validateTarget(oldValue: oldValue) }
+        .onChange(of: nightDose) { _, newValue in
+            // enforce bounds defensively (Stepper already does) in case of external mutation
+            if newValue < 1 { nightDose = 1 }
+            if newValue > 99 { nightDose = 99 }
+        }
     }
 
     private func ensureDefaultTarget() {
@@ -61,6 +78,10 @@ struct GeneralSettingsView: View { // renamed from SettingsView
 
     private func normalizeTarget() {
         validateTarget(oldValue: targetStorage)
+    }
+
+    private func normalizeNightDose() {
+        if nightDose < 1 || nightDose > 99 { nightDose = min(max(nightDose, 1), 99) }
     }
 }
 
