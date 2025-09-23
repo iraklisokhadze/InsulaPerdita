@@ -12,37 +12,37 @@
 			containerPortal = 884181532E64C34D0021C084 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 8841815A2E64C34D0021C084;
-			remoteInfo = InsCounter;
+			remoteInfo = InsulaPerdita;
 		};
 		884181732E64C3520021C084 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 884181532E64C34D0021C084 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 8841815A2E64C34D0021C084;
-			remoteInfo = InsCounter;
+			remoteInfo = InsulaPerdita;
 		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		8841815B2E64C34D0021C084 /* InsCounter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = InsCounter.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		884181682E64C3520021C084 /* InsCounterTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = InsCounterTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		884181722E64C3520021C084 /* InsCounterUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = InsCounterUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8841815B2E64C34D0021C084 /* InsulaPerdita.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = InsulaPerdita.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		884181682E64C3520021C084 /* InsulaPerditaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = InsulaPerditaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		884181722E64C3520021C084 /* InsulaPerditaUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = InsulaPerditaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		8841815D2E64C34D0021C084 /* InsCounter */ = {
+		8841815D2E64C34D0021C084 /* InsulaPerdita */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = InsCounter;
+			path = InsulaPerdita;
 			sourceTree = "<group>";
 		};
-		8841816B2E64C3520021C084 /* InsCounterTests */ = {
+		8841816B2E64C3520021C084 /* InsulaPerditaTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = InsCounterTests;
+			path = InsulaPerditaTests;
 			sourceTree = "<group>";
 		};
-		884181752E64C3520021C084 /* InsCounterUITests */ = {
+		884181752E64C3520021C084 /* InsulaPerditaUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = InsCounterUITests;
+			path = InsulaPerditaUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -75,9 +75,9 @@
 		884181522E64C34D0021C084 = {
 			isa = PBXGroup;
 			children = (
-				8841815D2E64C34D0021C084 /* InsCounter */,
-				8841816B2E64C3520021C084 /* InsCounterTests */,
-				884181752E64C3520021C084 /* InsCounterUITests */,
+				8841815D2E64C34D0021C084 /* InsulaPerdita */,
+				8841816B2E64C3520021C084 /* InsulaPerditaTests */,
+				884181752E64C3520021C084 /* InsulaPerditaUITests */,
 				8841815C2E64C34D0021C084 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -85,9 +85,9 @@
 		8841815C2E64C34D0021C084 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				8841815B2E64C34D0021C084 /* InsCounter.app */,
-				884181682E64C3520021C084 /* InsCounterTests.xctest */,
-				884181722E64C3520021C084 /* InsCounterUITests.xctest */,
+				8841815B2E64C34D0021C084 /* InsulaPerdita.app */,
+				884181682E64C3520021C084 /* InsulaPerditaTests.xctest */,
+				884181722E64C3520021C084 /* InsulaPerditaUITests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -95,9 +95,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		8841815A2E64C34D0021C084 /* InsCounter */ = {
+		8841815A2E64C34D0021C084 /* InsulaPerdita */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 8841817C2E64C3530021C084 /* Build configuration list for PBXNativeTarget "InsCounter" */;
+			buildConfigurationList = 8841817C2E64C3530021C084 /* Build configuration list for PBXNativeTarget "InsulaPerdita" */;
 			buildPhases = (
 				884181572E64C34D0021C084 /* Sources */,
 				884181582E64C34D0021C084 /* Frameworks */,
@@ -108,18 +108,18 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				8841815D2E64C34D0021C084 /* InsCounter */,
+				8841815D2E64C34D0021C084 /* InsulaPerdita */,
 			);
-			name = InsCounter;
+			name = InsulaPerdita;
 			packageProductDependencies = (
 			);
-			productName = InsCounter;
-			productReference = 8841815B2E64C34D0021C084 /* InsCounter.app */;
+			productName = InsulaPerdita;
+			productReference = 8841815B2E64C34D0021C084 /* InsulaPerdita.app */;
 			productType = "com.apple.product-type.application";
 		};
-		884181672E64C3520021C084 /* InsCounterTests */ = {
+		884181672E64C3520021C084 /* InsulaPerditaTests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 8841817F2E64C3530021C084 /* Build configuration list for PBXNativeTarget "InsCounterTests" */;
+			buildConfigurationList = 8841817F2E64C3530021C084 /* Build configuration list for PBXNativeTarget "InsulaPerditaTests" */;
 			buildPhases = (
 				884181642E64C3520021C084 /* Sources */,
 				884181652E64C3520021C084 /* Frameworks */,
@@ -131,18 +131,18 @@
 				8841816A2E64C3520021C084 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				8841816B2E64C3520021C084 /* InsCounterTests */,
+				8841816B2E64C3520021C084 /* InsulaPerditaTests */,
 			);
-			name = InsCounterTests;
+			name = InsulaPerditaTests;
 			packageProductDependencies = (
 			);
-			productName = InsCounterTests;
-			productReference = 884181682E64C3520021C084 /* InsCounterTests.xctest */;
+			productName = InsulaPerditaTests;
+			productReference = 884181682E64C3520021C084 /* InsulaPerditaTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
-		884181712E64C3520021C084 /* InsCounterUITests */ = {
+		884181712E64C3520021C084 /* InsulaPerditaUITests */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 884181822E64C3530021C084 /* Build configuration list for PBXNativeTarget "InsCounterUITests" */;
+			buildConfigurationList = 884181822E64C3530021C084 /* Build configuration list for PBXNativeTarget "InsulaPerditaUITests" */;
 			buildPhases = (
 				8841816E2E64C3520021C084 /* Sources */,
 				8841816F2E64C3520021C084 /* Frameworks */,
@@ -154,13 +154,13 @@
 				884181742E64C3520021C084 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				884181752E64C3520021C084 /* InsCounterUITests */,
+				884181752E64C3520021C084 /* InsulaPerditaUITests */,
 			);
-			name = InsCounterUITests;
+			name = InsulaPerditaUITests;
 			packageProductDependencies = (
 			);
-			productName = InsCounterUITests;
-			productReference = 884181722E64C3520021C084 /* InsCounterUITests.xctest */;
+			productName = InsulaPerditaUITests;
+			productReference = 884181722E64C3520021C084 /* InsulaPerditaUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 /* End PBXNativeTarget section */
@@ -186,7 +186,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 884181562E64C34D0021C084 /* Build configuration list for PBXProject "InsCounter" */;
+			buildConfigurationList = 884181562E64C34D0021C084 /* Build configuration list for PBXProject "InsulaPerdita" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -200,9 +200,9 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				8841815A2E64C34D0021C084 /* InsCounter */,
-				884181672E64C3520021C084 /* InsCounterTests */,
-				884181712E64C3520021C084 /* InsCounterUITests */,
+				8841815A2E64C34D0021C084 /* InsulaPerdita */,
+				884181672E64C3520021C084 /* InsulaPerditaTests */,
+				884181712E64C3520021C084 /* InsulaPerditaUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -258,12 +258,12 @@
 /* Begin PBXTargetDependency section */
 		8841816A2E64C3520021C084 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 8841815A2E64C34D0021C084 /* InsCounter */;
+			target = 8841815A2E64C34D0021C084 /* InsulaPerdita */;
 			targetProxy = 884181692E64C3520021C084 /* PBXContainerItemProxy */;
 		};
 		884181742E64C3520021C084 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 8841815A2E64C34D0021C084 /* InsCounter */;
+			target = 8841815A2E64C34D0021C084 /* InsulaPerdita */;
 			targetProxy = 884181732E64C3520021C084 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -393,7 +393,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = InsCounter/InsCounter.entitlements;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = InsulaPerdita/InsulaPerdita.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = UB3VKAR2CG;
@@ -414,7 +415,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = InsCounter;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.InsulaPerdita;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -427,7 +428,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = InsCounter/InsCounter.entitlements;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
+				CODE_SIGN_ENTITLEMENTS = InsulaPerdita/InsulaPerdita.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = UB3VKAR2CG;
@@ -448,7 +450,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = InsCounter;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.InsulaPerdita;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -466,12 +468,12 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = ccl.InsCounterTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.InsulaPerditaTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/InsCounter.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/InsCounter";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/InsulaPerdita.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/InsulaPerdita";
 			};
 			name = Debug;
 		};
@@ -485,12 +487,12 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 18.5;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = ccl.InsCounterTests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.InsulaPerditaTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/InsCounter.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/InsCounter";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/InsulaPerdita.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/InsulaPerdita";
 			};
 			name = Release;
 		};
@@ -502,12 +504,12 @@
 				DEVELOPMENT_TEAM = UB3VKAR2CG;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = ccl.InsCounterUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.InsulaPerditaUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = InsCounter;
+				TEST_TARGET_NAME = InsulaPerdita;
 			};
 			name = Debug;
 		};
@@ -519,19 +521,19 @@
 				DEVELOPMENT_TEAM = UB3VKAR2CG;
 				GENERATE_INFOPLIST_FILE = YES;
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = ccl.InsCounterUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.InsulaPerditaUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_TARGET_NAME = InsCounter;
+				TEST_TARGET_NAME = InsulaPerdita;
 			};
 			name = Release;
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		884181562E64C34D0021C084 /* Build configuration list for PBXProject "InsCounter" */ = {
+		884181562E64C34D0021C084 /* Build configuration list for PBXProject "InsulaPerdita" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				8841817A2E64C3530021C084 /* Debug */,
@@ -540,7 +542,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		8841817C2E64C3530021C084 /* Build configuration list for PBXNativeTarget "InsCounter" */ = {
+		8841817C2E64C3530021C084 /* Build configuration list for PBXNativeTarget "InsulaPerdita" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				8841817D2E64C3530021C084 /* Debug */,
@@ -549,7 +551,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		8841817F2E64C3530021C084 /* Build configuration list for PBXNativeTarget "InsCounterTests" */ = {
+		8841817F2E64C3530021C084 /* Build configuration list for PBXNativeTarget "InsulaPerditaTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				884181802E64C3530021C084 /* Debug */,
@@ -558,7 +560,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		884181822E64C3530021C084 /* Build configuration list for PBXNativeTarget "InsCounterUITests" */ = {
+		884181822E64C3530021C084 /* Build configuration list for PBXNativeTarget "InsulaPerditaUITests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				884181832E64C3530021C084 /* Debug */,

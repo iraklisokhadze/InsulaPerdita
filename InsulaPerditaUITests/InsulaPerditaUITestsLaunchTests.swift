@@ -1,13 +1,13 @@
 //
-//  InsCounterUITestsLaunchTests.swift
-//  InsCounterUITests
+//  InsulaPerditaUITestsLaunchTests.swift
+//  InsulaPerditaUITests
 //
 //  Created by Irakli Sokhadze on 31.08.25.
 //
 
 import XCTest
 
-final class InsCounterUITestsLaunchTests: XCTestCase {
+final class InsulaPerditaUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

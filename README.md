@@ -1,4 +1,4 @@
-# InsCounter
+# InsulaPerdita
 
 SwiftUI iOS app for insulin dose suggestion, NFC sensor scan scaffold (FreeStyle Libre style), injection & activity logging, and configurable targets.
 
@@ -14,7 +14,7 @@ SwiftUI iOS app for insulin dose suggestion, NFC sensor scan scaffold (FreeStyle
 
 ## Structure
 ```
-InsCounterApp.swift        # App entry
+InsulaPerditaApp.swift     # App entry
 Views/                     # SwiftUI views
 Models.swift               # Data models & persistence helpers
 NFCManager.swift           # CoreNFC session handling
@@ -24,9 +24,9 @@ UbiquitousLanguage.md      # Domain glossary
 ```
 
 ## Build & Run
-1. Open `InsCounter.xcodeproj` in Xcode 16+
+1. Open `InsulaPerdita.xcodeproj` in Xcode 16+
 2. Select a real iPhone device (NFC not available in Simulator)
-3. (If team supports) Add Near Field Communication Tag Reading capability
+3. Add Near Field Communication Tag Reading capability (Signing & Capabilities) if not automatically enabled
 4. Run the app
 
 If using a free personal team, NFC entitlement may be unavailable (session will report not supported).

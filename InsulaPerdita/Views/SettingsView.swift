@@ -5,6 +5,7 @@ struct GeneralSettingsView: View { // renamed from SettingsView
     @AppStorage("sensitivity") private var sensitivityStorage: String = "medium"
     @AppStorage("target") private var targetStorage: String = "110" // added target
     @AppStorage("nightDose") private var nightDose: Int = 10 // ღამის ნემსის დოზა (1-99)
+    @State private var lastValidTarget: String = "110" // track last valid numeric target
 
     var body: some View {
         Form {
@@ -46,10 +47,11 @@ struct GeneralSettingsView: View { // renamed from SettingsView
             }
         }
         .navigationTitle("პარამეტრები") // changed from "General"
-        .onAppear { ensureDefaultTarget(); normalizeNightDose() }
-        .onChange(of: targetStorage) { oldValue, _ in validateTarget(oldValue: oldValue) }
+        .onAppear { ensureDefaultTarget(); normalizeNightDose(); lastValidTarget = sanitizedNumericString(targetStorage) ?? lastValidTarget }
+        // Updated to zero-parameter closure (iOS 17 preferred API)
+        .onChange(of: targetStorage) { validateTarget() }
+        // Updated to two-parameter closure (iOS 17 preferred API variant)
         .onChange(of: nightDose) { _, newValue in
-            // enforce bounds defensively (Stepper already does) in case of external mutation
             if newValue < 1 { nightDose = 1 }
             if newValue > 99 { nightDose = 99 }
         }
@@ -61,24 +63,30 @@ struct GeneralSettingsView: View { // renamed from SettingsView
         }
     }
 
-    private func validateTarget(oldValue: String) {
+    private func validateTarget() {
         let trimmed = targetStorage.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty {
-            targetStorage = "110"
+            targetStorage = lastValidTarget
             return
         }
-        // Accept digits, comma, dot
+        // Accept digits, comma, dot (filter out others)
         let allowed = trimmed.filter { "0123456789,.".contains($0) }
         if allowed != trimmed { targetStorage = allowed }
-        let normalized = allowed.replacingOccurrences(of: ",", with: ".")
-        if Double(normalized) == nil { // revert if not numeric
-            targetStorage = oldValue.isEmpty ? "110" : oldValue
+        if let numeric = sanitizedNumericString(allowed) {
+            lastValidTarget = numeric // remember sanitized numeric string
+        } else {
+            // revert to last valid
+            targetStorage = lastValidTarget
         }
     }
 
-    private func normalizeTarget() {
-        validateTarget(oldValue: targetStorage)
+    private func sanitizedNumericString(_ input: String) -> String? {
+        let normalized = input.replacingOccurrences(of: ",", with: ".")
+        if let _ = Double(normalized) { return input } // keep user formatting (comma vs dot) if numeric
+        return nil
     }
+
+    private func normalizeTarget() { validateTarget() }
 
     private func normalizeNightDose() {
         if nightDose < 1 || nightDose > 99 { nightDose = min(max(nightDose, 1), 99) }

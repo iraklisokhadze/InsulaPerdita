@@ -1,4 +1,4 @@
-# Ubiquitous Language Glossary (InsCounter)
+# Ubiquitous Language Glossary (InsulaPerdita)
 
 Last updated: 2025-09-12
 

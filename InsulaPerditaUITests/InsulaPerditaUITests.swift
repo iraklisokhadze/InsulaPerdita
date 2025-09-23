@@ -1,13 +1,13 @@
 //
-//  InsCounterUITests.swift
-//  InsCounterUITests
+//  InsulaPerditaUITests.swift
+//  InsulaPerditaUITests
 //
 //  Created by Irakli Sokhadze on 31.08.25.
 //
 
 import XCTest
 
-final class InsCounterUITests: XCTestCase {
+final class InsulaPerditaUITests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
