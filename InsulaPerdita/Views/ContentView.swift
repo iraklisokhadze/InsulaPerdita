@@ -108,11 +108,11 @@ struct ContentView: View {
     // Extracted from previous body chain to reduce generic nesting complexity
     private var rootContent: some View {
         ScrollView { mainVStack }
+            .simultaneousGesture(TapGesture().onEnded { if sugarFieldFocused { dismissSugarKeyboard() } })
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
             .toolbar { leadingToolbar }
             .toolbar { trailingToolbar }
-            .toolbar { keyboardToolbar }
             .onAppear {
                 // Load persisted data with correct keys
                 injectionActions = loadInjectionActions(key: injectionStorageKey)
@@ -152,10 +152,57 @@ struct ContentView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showInjectionSheet) { injectionSheet }
-            .sheet(isPresented: $showActivitySheet) { activitySheet }
-            .sheet(isPresented: $showRegisteredActivitiesSheet) { registeredActivitiesSheet }
-            .sheet(isPresented: $showRegisteredActivityPicker) { registeredActivityPickerSheet }
+            .sheet(isPresented: $showInjectionSheet) {
+                InjectionSheetView(
+                    isPresented: $showInjectionSheet,
+                    injectionPeriod: $injectionPeriod,
+                    injectionDose: $injectionDose,
+                    injectionMinDose: injectionMinDose,
+                    injectionMaxDose: injectionMaxDose,
+                    injectionDailyDose: injectionDailyDose,
+                    canIncrementDose: canIncrementDose,
+                    canDecrementDose: canDecrementDose,
+                    decrementDose: decrementDose,
+                    incrementDose: incrementDose,
+                    saveAction: saveInjection
+                )
+            }
+            // Replaced inline activity sheets with extracted views
+            .sheet(isPresented: $showActivitySheet) {
+                ActivitySheetView(
+                    isPresented: $showActivitySheet,
+                    title: $newActivityTitle,
+                    effect: $newActivityEffect,
+                    editingIndex: $editingActivityIndex,
+                    effectOptions: activityEffectOptions,
+                    canSave: canSaveActivity,
+                    onSave: saveActivity
+                )
+            }
+            .sheet(isPresented: $showRegisteredActivitiesSheet) {
+                RegisteredActivitiesSheetView(
+                    isPresented: $showRegisteredActivitiesSheet,
+                    title: $newRegisteredActivityTitle,
+                    effect: $newRegisteredActivityEffect,
+                    editingIndex: $editingRegisteredActivityIndex,
+                    registeredActivities: $registeredActivities,
+                    effectOptions: activityEffectOptions,
+                    canSave: canSaveRegisteredActivity,
+                    onSave: saveRegisteredActivity,
+                    onDelete: { indices in
+                        registeredActivities.remove(atOffsets: indices)
+                        persistRegisteredActivities(registeredActivities, key: registeredActivitiesStorageKey)
+                    }
+                )
+            }
+            .sheet(isPresented: $showRegisteredActivityPicker) {
+                RegisteredActivityPickerSheetView(
+                    isPresented: $showRegisteredActivityPicker,
+                    registeredActivities: registeredActivities,
+                    selectedRegisteredActivityId: $selectedRegisteredActivityId,
+                    onPick: saveRegisteredActivityAction
+                )
+            }
             .confirmationDialog("დამატება", isPresented: $showActionChooser, titleVisibility: .visible) {
                 Button("ინექცია") { prepareInjectionSheet() }
                 Button("აქტივობა") { beginAddRegisteredActivityAction() }
@@ -219,12 +266,6 @@ struct ContentView: View {
     }
     private var inputSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            if let w = weightValue {
-                Text("წონა: \(formatNumber(w)) კგ").font(.subheadline).foregroundColor(.secondary)
-            } else {
-                Text("წონა არ არის დაყენებული პარამეტრებში").font(.subheadline).foregroundColor(.orange)
-            }
-            Text("მგრძნობიარობა: \(sensitivity.rawValue)").font(.subheadline).foregroundColor(.secondary)
             VStack(alignment: .leading, spacing: 4) {
                 Text("შაქრის დონე")
                 GeometryReader { geo in
@@ -266,8 +307,11 @@ struct ContentView: View {
     }
     private var resultSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if sugarLevelValue == nil || (sugarLevelValue ?? 0) <= 0 {
+            if weightValue  == nil{
+                Text("წონა არ არის დაყენებული პარამეტრებში").font(.subheadline).foregroundColor(.orange)
+            } else if sugarLevelValue == nil || (sugarLevelValue ?? 0) <= 0 {
                 Text("შეიყვანეთ მნიშვნელობები").foregroundColor(.secondary)
+            
             } else if let dose = recommendedDose {
                 Text("რეკომენდირებული დოზა: \(formatNumber(dose)) ერთეული").font(.headline).fontWeight(.semibold)
             } else {
@@ -374,168 +418,6 @@ struct ContentView: View {
     }
     
     // MARK: - Sheets & Forms
-    private var injectionSheet: some View {
-        NavigationStack {
-            Form {
-                Section(header: Text("დრო")) {
-                    Picker("", selection: $injectionPeriod) {
-                        ForEach(InjectionPeriod.allCases) { p in
-                            Image(systemName: p.symbol)
-                                .tag(p)
-                                .accessibilityLabel(p.display)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                }
-                Section(header: Text("დოზა")) {
-                    HStack(alignment: .center, spacing: 0) {
-                        Button(action: decrementDose) {
-                            Image(systemName: "minus.circle.fill")
-                                .font(.system(size: 28))
-                                .frame(width: 34, height: 34)
-                        }
-                        .disabled(!canDecrementDose)
-                        .buttonStyle(.plain)
-                        .contentShape(Circle())
-                        .padding(.trailing, 12)
-                        Spacer(minLength: 8)
-                        Text(formatNumber(injectionDose))
-                            .font(.system(size: 34, weight: .semibold))
-                            .frame(minWidth: 80)
-                            .monospacedDigit()
-                            .accessibilityLabel("Dose \(formatNumber(injectionDose))")
-                        Spacer(minLength: 8)
-                        Button(action: incrementDose) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 28))
-                                .frame(width: 34, height: 34)
-                        }
-                        .disabled(!canIncrementDose)
-                        .buttonStyle(.plain)
-                        .contentShape(Circle())
-                        .padding(.leading, 12)
-                    }
-                    .padding(.vertical, 6)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("მინ: \(formatNumber(injectionMinDose)) მაქს: \(formatNumber(injectionMaxDose))")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                        if injectionDailyDose == nil {
-                            Text("მაქსიმუმი გამოთვლილია რეკომენდაციიდან ან მინიმუმიდან (დააყენე წონა უფრო ზუსტი ზღვრისთვის)")
-                                .font(.caption2)
-                                .foregroundColor(.orange)
-                        }
-                    }
-                }
-            }
-            .navigationTitle("ინექცია")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("დახურვა") { showInjectionSheet = false } }
-                ToolbarItem(placement: .confirmationAction) { Button("შენახვა") { saveInjection() } }
-            }
-        }
-    }
-    
-    private var activitySheet: some View {
-        NavigationStack {
-            Form {
-                Section(header: Text("დასახელება")) { TextField("დასახელება", text: $newActivityTitle) }
-                Section(header: Text("საშალო გავლენა")) { activityEffectChips(selected: $newActivityEffect) }
-            }
-            .navigationTitle(editingActivityIndex == nil ? "ახალი აქტივობა" : "რედაქტირება")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("დახურვა") { showActivitySheet = false } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(editingActivityIndex == nil ? "შენახვა" : "განახლება") { saveActivity() }.disabled(!canSaveActivity)
-                }
-            }
-        }
-    }
-    
-    private var registeredActivitiesSheet: some View {
-        NavigationStack {
-            Form {
-                Section(header: Text("დასახელება")) { TextField("დასახელება", text: $newRegisteredActivityTitle) }
-                Section(header: Text("საშალო გავლენა")) { activityEffectChips(selected: $newRegisteredActivityEffect) }
-                Section(header: Text("შენახული აქტივობები")) {
-                    if registeredActivities.isEmpty {
-                        Text("აქტივობები ჯერ არ არის").foregroundColor(.secondary)
-                    } else {
-                        ForEach(registeredActivities.indices, id: \ .self) { idx in
-                            let act = registeredActivities[idx]
-                            HStack {
-                                Text(act.title)
-                                Spacer()
-                                Text((act.averageEffect > 0 ? "+" : "") + String(act.averageEffect))
-                                    .foregroundColor(effectColor(act.averageEffect))
-                            }
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                newRegisteredActivityTitle = act.title
-                                newRegisteredActivityEffect = act.averageEffect
-                                editingRegisteredActivityIndex = idx
-                            }
-                        }
-                        .onDelete { indices in
-                            registeredActivities.remove(atOffsets: indices)
-                            persistRegisteredActivities(registeredActivities, key: registeredActivitiesStorageKey)
-                        }
-                    }
-                }
-            }
-            .navigationTitle(editingRegisteredActivityIndex == nil ? "ახალი აქტივობა" : "რედაქტირება")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("დახურვა") { showRegisteredActivitiesSheet = false } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(editingRegisteredActivityIndex == nil ? "შენახვა" : "განახლება") { saveRegisteredActivity() }.disabled(!canSaveRegisteredActivity)
-                }
-            }
-        }
-    }
-    
-    private func activityEffectChips(selected: Binding<Int?>) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                ForEach(activityEffectOptions, id: \ .self) { value in
-                    let isSel = value == selected.wrappedValue
-                    Text((value > 0 ? "+" : "") + String(value))
-                        .font(.subheadline.monospacedDigit())
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 14)
-                        .background(isSel ? effectColor(value) : Color(.systemGray5))
-                        .foregroundColor(isSel ? .white : effectColor(value))
-                        .clipShape(Capsule())
-                        .onTapGesture { withAnimation(.easeInOut(duration: 0.15)) { selected.wrappedValue = value } }
-                }
-            }.padding(.vertical, 4)
-        }
-    }
-    
-    private var registeredActivityPickerSheet: some View {
-        NavigationStack {
-            Form {
-                if registeredActivities.isEmpty {
-                    Text("ჯერ არ არის რეგისტრირებული აქტივობები").foregroundColor(.secondary)
-                } else {
-                    ForEach(registeredActivities) { act in
-                        Button {
-                            selectedRegisteredActivityId = act.id
-                            saveRegisteredActivityAction()
-                        } label: {
-                            HStack {
-                                Text(act.title)
-                                Spacer()
-                                Text((act.averageEffect > 0 ? "+" : "") + String(act.averageEffect))
-                                    .foregroundColor(effectColor(act.averageEffect))
-                            }
-                        }
-                    }
-                }
-            }
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("დახურვა") { showRegisteredActivityPicker = false } } }
-        }
-    }
-    
     // MARK: - Activity CRUD
     private var canSaveActivity: Bool { !newActivityTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && newActivityEffect != nil }
     private func beginAddActivity() { resetActivityForm(); showActivitySheet = true }
@@ -586,7 +468,7 @@ struct ContentView: View {
         injectionDoseWasManuallyChanged = false
         let start = recommendedDose ?? injectionMinDose
         injectionDose = clampDose(start, minValue: injectionMinDose, maxValue: injectionMaxDose)
-        injectionPeriod = .daytime // default to daytime; nighttime choice will override dose via onChange
+        injectionPeriod = .daytime
         showInjectionSheet = true
     }
     private func decrementDose() { guard canDecrementDose else { return }; injectionDoseWasManuallyChanged = true; injectionDose = clampDose(injectionDose - doseStep, minValue: injectionMinDose, maxValue: injectionMaxDose) }
@@ -599,15 +481,13 @@ struct ContentView: View {
         showInjectionSheet = false
     }
     
-    // MARK: - Keyboard
-    private var keyboardToolbar: some ToolbarContent { ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("დახურვა") { dismissSugarKeyboard() } } }
+    // MARK: - Hide Keyboard
     private func dismissSugarKeyboard() { sugarFieldFocused = false }
     private func autoDismissSugarKeyboardIfNeeded(sugarLevel: String, dismiss: () -> Void) { let digits = sugarLevel.filter { $0.isNumber }.count; if digits >= 3 { dismiss() } }
     
     // MARK: - NFC Section
     private var nfcSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("NFC სენსორი").font(.headline)
             HStack {
                 Button { nfcManager.startScan() } label: {
                     HStack {
@@ -670,6 +550,11 @@ struct ContentView: View {
     }
 }
 
-// Remove obsolete soft delete helper types since undo mechanism removed
-// private struct DeletedRecord { let type: DeletedType; let id: UUID }
-// private enum DeletedType { case injection, activityAction, legacyActivity }
+#Preview("Light") {
+    NavigationStack { ContentView() }
+}
+
+#Preview("Dark") {
+    NavigationStack { ContentView() }
+        .preferredColorScheme(.dark)
+}
