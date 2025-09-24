@@ -8,7 +8,7 @@ InsulaPerdita is a SwiftUI iOS app for glucose input, insulin dose suggestion, N
 
 ## Project Pages
 - [Support](support.html)
-- (Optional) Privacy Policy *(add privacy.md later)*
+- [Privacy Policy](privacy.html)
 - [Repository README](../README.md)
 
 ## Key Features

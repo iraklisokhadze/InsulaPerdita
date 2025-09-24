@@ -4,6 +4,10 @@ layout: default
 ---
 # Support
 
+## Contact
+<p><a href="mailto:irakli.sokhadze@outlook.com?subject=InsulaPerdita%20Support%20Request&body=Device%20Model:%0AiOS%20Version:%0AApp%20Build:%0ASteps%20to%20Reproduce:%0AExpected%20Result:%0AActual%20Result:%0A" style="display:inline-block;padding:0.6em 1em;background:#0366d6;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">Email Support</a></p>
+<small>If the button does not work, email: <a href="mailto:irakli.sokhadze@outlook.com">irakli.sokhadze@outlook.com</a></small>
+
 ## Getting Help
 Open a GitHub Issue with:
 - App version / build number
