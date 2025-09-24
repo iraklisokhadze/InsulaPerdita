@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		880034812E83D6250005E2FF /* index.md in Resources */ = {isa = PBXBuildFile; fileRef = 8800347E2E83D6250005E2FF /* index.md */; };
+		880034822E83D6250005E2FF /* support.md in Resources */ = {isa = PBXBuildFile; fileRef = 8800347F2E83D6250005E2FF /* support.md */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		884181692E64C3520021C084 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -24,6 +29,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		8800347E2E83D6250005E2FF /* index.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = index.md; sourceTree = "<group>"; };
+		8800347F2E83D6250005E2FF /* support.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = support.md; sourceTree = "<group>"; };
 		8841815B2E64C34D0021C084 /* InsulaPerdita.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = InsulaPerdita.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		884181682E64C3520021C084 /* InsulaPerditaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = InsulaPerditaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		884181722E64C3520021C084 /* InsulaPerditaUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = InsulaPerditaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -72,9 +79,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		880034802E83D6250005E2FF /* docs */ = {
+			isa = PBXGroup;
+			children = (
+				8800347E2E83D6250005E2FF /* index.md */,
+				8800347F2E83D6250005E2FF /* support.md */,
+			);
+			path = docs;
+			sourceTree = "<group>";
+		};
 		884181522E64C34D0021C084 = {
 			isa = PBXGroup;
 			children = (
+				880034802E83D6250005E2FF /* docs */,
 				8841815D2E64C34D0021C084 /* InsulaPerdita */,
 				8841816B2E64C3520021C084 /* InsulaPerditaTests */,
 				884181752E64C3520021C084 /* InsulaPerditaUITests */,
@@ -212,6 +229,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				880034812E83D6250005E2FF /* index.md in Resources */,
+				880034822E83D6250005E2FF /* support.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
