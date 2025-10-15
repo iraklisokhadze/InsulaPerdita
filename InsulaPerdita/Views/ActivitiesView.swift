@@ -1,76 +1,103 @@
 import SwiftUI
 
 struct ActivitiesView: View {
-    // Use shared RegisteredActivity model instead of local Activity
+    // Presentation binding (used when shown as sheet). If used in navigation push, pass .constant(true) and set showsCloseButton=false.
+    @Binding var isPresented: Bool
+    let saveAction: (RegisteredActivity) -> Void
+    var showsCloseButton: Bool = true
+    @Environment(\.dismiss) private var dismissEnv
     @State private var activities: [RegisteredActivity] = []
-    
-    // Sheet / form state
+    @EnvironmentObject var activityHistory: ActivityHistoryStore
     @State private var showAddSheet = false
     @State private var newTitle: String = ""
     @State private var selectedEffect: Int? = nil
-    @State private var editingIndex: Int? = nil
     @State private var didLoad = false
-    
+    @State private var showHistoryConfirmation = false
+    @State private var lastAddedActivityTitle: String? = nil
     private let effectOptions: [Int] = activityEffectOptions
-    // Use global storage key so ActivitiesView feeds pre-registered list used elsewhere
     private let storageKey = registeredActivitiesStorageKey
-    
+
     var body: some View {
-        List {
-            if activities.isEmpty {
-                Text("აქტივობები ჯერ არ არის").foregroundColor(.secondary)
-            } else {
-                ForEach(Array(activities.enumerated()), id: \.element.id) { index, activity in
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(activity.title).font(.headline)
-                        Spacer()
-                        Text(formatEffect(activity.averageEffect))
-                            .font(.caption)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(effectColor(activity.averageEffect).opacity(0.15))
-                            .foregroundColor(effectColor(activity.averageEffect))
-                            .clipShape(Capsule())
+        NavigationStack {
+            VStack(spacing: 0) {
+                List {
+                    if activities.isEmpty {
+                        Text("აქტივობები ჯერ არ არის").foregroundColor(.secondary)
+                    } else {
+                        ForEach(activities) { activity in
+                            HStack(alignment: .firstTextBaseline) {
+                                Text(activity.title).font(.headline)
+                                Spacer()
+                                Text(formatEffect(activity.averageEffect))
+                                    .font(.caption)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(effectColor(activity.averageEffect).opacity(0.15))
+                                    .foregroundColor(effectColor(activity.averageEffect))
+                                    .clipShape(Capsule())
+                            }
+                            .padding(.vertical, 4)
+                            .contentShape(Rectangle())
+                            .onTapGesture { addActivityToHistoryAndDismiss(activity) }
+                        }
                     }
-                    .contentShape(Rectangle())
-                    .onTapGesture { beginEdit(index: index) }
-                    .padding(.vertical, 4)
                 }
-                .onDelete(perform: deleteActivities)
+                .listStyle(.plain)
+                Button(action: { showAddSheet = true }) {
+                    HStack {
+                        Image(systemName: "plus.circle.fill").font(.title2)
+                        Text("ახალი აქტივობა").font(.headline)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.accentColor.opacity(0.1))
+                    .cornerRadius(12)
+                    .padding([.horizontal, .bottom])
+                }
+                .accessibilityLabel("ახალი აქტივობა")
+            }
+            .navigationTitle("აქტივობები")
+            .toolbar { if showsCloseButton { ToolbarItem(placement: .cancellationAction) { Button("დახურვა") { isPresented = false } } } }
+            .sheet(isPresented: $showAddSheet, onDismiss: resetForm) { addSheet }
+            .onAppear { if !didLoad { loadActivities(); didLoad = true } }
+            .overlay(historyConfirmationOverlay, alignment: .top)
+        }
+    }
+
+    private var historyConfirmationOverlay: some View {
+        Group {
+            if showHistoryConfirmation, let title = lastAddedActivityTitle {
+                VStack {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
+                        Text("\(title) დამატებულია ისტორიაში").font(.subheadline).foregroundColor(.primary)
+                    }
+                    .padding(10)
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(12)
+                    Spacer()
+                }
+                .padding(.top, 24)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .animation(.easeInOut(duration: 0.2), value: showHistoryConfirmation)
             }
         }
-        .navigationTitle("აქტივობები")
-        .toolbar { toolbarContent }
-        .sheet(isPresented: $showAddSheet, onDismiss: resetForm) { addSheet }
-        .onAppear { if !didLoad { loadActivities(); didLoad = true } }
     }
-    
-    private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .navigationBarTrailing) {
-            Button(action: { beginAdd() }) { Image(systemName: "plus") }
-                .accessibilityLabel("ახალი აქტივობა")
-        }
-    }
-    
+
     private var addSheet: some View {
         NavigationStack {
             Form {
-                Section(header: Text("დაფიქსირება")) {
-                    TextField("დასახელება", text: $newTitle)
-                }
+                Section(header: Text("დაფიქსირება")) { TextField("დასახელება", text: $newTitle) }
                 Section(header: Text("საშალო გავლენა")) { effectPicker }
             }
-            .navigationTitle(editingIndex == nil ? "ახალი აქტივობა" : "რედაქტირება")
+            .navigationTitle("ახალი აქტივობა")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("გაუქმება") { showAddSheet = false } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(editingIndex == nil ? "შენახვა" : "განახლება", action: saveActivity)
-                        .disabled(!canSave)
-                }
+                ToolbarItem(placement: .confirmationAction) { Button("შენახვა", action: saveNewActivity).disabled(!canSave) }
             }
         }
     }
-    
+
     private var effectPicker: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 12) {
@@ -90,49 +117,37 @@ struct ActivitiesView: View {
             .padding(.vertical, 4)
         }
     }
-    
+
     private var canSave: Bool { !newTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && selectedEffect != nil }
-    
-    // MARK: - Actions
-    private func beginAdd() { resetForm(); showAddSheet = true }
-    private func beginEdit(index: Int) {
-        guard activities.indices.contains(index) else { return }
-        let a = activities[index]
-        newTitle = a.title
-        selectedEffect = a.averageEffect
-        editingIndex = index
-        showAddSheet = true
-    }
-    private func saveActivity() {
+
+    private func saveNewActivity() {
         guard canSave, let effect = selectedEffect else { return }
         let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let idx = editingIndex, activities.indices.contains(idx) {
-            activities[idx].title = trimmed
-            activities[idx].averageEffect = effect
-        } else {
-            activities.append(RegisteredActivity(id: UUID(), title: trimmed, averageEffect: effect))
-        }
+        let newActivity = RegisteredActivity(id: UUID(), title: trimmed, averageEffect: effect)
+        activities.append(newActivity)
         persistActivities()
         showAddSheet = false
     }
-    private func deleteActivities(at offsets: IndexSet) { activities.remove(atOffsets: offsets); persistActivities() }
-    private func resetForm() { newTitle = ""; selectedEffect = nil; editingIndex = nil }
-    
-    // MARK: - Persistence
+
+    private func resetForm() { newTitle = ""; selectedEffect = nil }
+
+    private func addActivityToHistoryAndDismiss(_ activity: RegisteredActivity) {
+        saveAction(activity)
+        lastAddedActivityTitle = activity.title
+        showHistoryConfirmation = true
+            showHistoryConfirmation = false
+            if showsCloseButton { isPresented = false }
+    }
+
     private func persistActivities() {
-        do {
-            let data = try JSONEncoder().encode(activities)
-            UserDefaults.standard.set(data, forKey: storageKey)
-        } catch { /* silent */ }
+        do { let data = try JSONEncoder().encode(activities); UserDefaults.standard.set(data, forKey: storageKey) } catch { }
     }
     private func loadActivities() {
         guard let data = UserDefaults.standard.data(forKey: storageKey) else { return }
         if let decoded = try? JSONDecoder().decode([RegisteredActivity].self, from: data) { activities = decoded }
     }
-    
-    // MARK: - Helpers
     private func formatEffect(_ value: Int) -> String { (value > 0 ? "+" : "") + String(value) }
     private func effectColor(_ value: Int) -> Color { value == 0 ? .gray : (value > 0 ? .green : .red) }
 }
 
-#Preview { NavigationStack { ActivitiesView() } }
+#Preview { ActivitiesView(isPresented: .constant(true), saveAction: { _ in }) }

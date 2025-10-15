@@ -93,6 +93,16 @@ struct GeneralSettingsView: View { // renamed from SettingsView
     }
 }
 
+private struct ActivitiesWrapper: View { // supplies required params for ActivitiesView when navigated
+    @EnvironmentObject var activityHistory: ActivityHistoryStore
+    var body: some View {
+        ActivitiesView(isPresented: .constant(true), saveAction: { activity in
+            let action = ActivityAction(id: UUID(), date: Date(), activityId: activity.id)
+            activityHistory.add(action)
+        }, showsCloseButton: false)
+    }
+}
+
 struct SettingsView: View { // new container listing items
     var body: some View {
         List {
@@ -100,7 +110,7 @@ struct SettingsView: View { // new container listing items
                 NavigationLink("პარამეტრები") { GeneralSettingsView() } // changed label
             }
             Section { // activities section
-                NavigationLink("აქტივობები") { ActivitiesView() }
+                NavigationLink("აქტივობები") { ActivitiesWrapper() }
             }
         }
         .navigationTitle("პარამეტრები")
@@ -110,5 +120,6 @@ struct SettingsView: View { // new container listing items
 struct SettingsView_Previews: PreviewProvider {
     static var previews: some View {
         NavigationStack { SettingsView() }
+            .environmentObject(ActivityHistoryStore())
     }
 }
