@@ -101,12 +101,18 @@ struct ContentView: View {
     @State private var pendingDeleteId: String? = nil
     
     @EnvironmentObject var activityHistory: ActivityHistoryStore
+    // Success banner state
+    private enum PendingSuccessKind: Equatable { case injection(dose: Double, period: InjectionPeriod); case activity(title: String, effect: Int) }
+    @State private var pendingSuccess: PendingSuccessKind? = nil
+    @State private var activeSuccess: PendingSuccessKind? = nil
+    @State private var successHideTask: DispatchWorkItem? = nil
     
     // Replace body with simpler wrapper referencing extracted rootContent
     var body: some View {
         NavigationStack {
-            rootContent // now excludes toolbar
+            rootContent
                 .toolbar { MainToolbar(showSettings: $showSettings, showActivitiesView: $showActivitiesView, showActionChooser: $showActionChooser) }
+                .overlay(successBannerOverlay, alignment: .top)
         }
     }
     
@@ -136,7 +142,7 @@ struct ContentView: View {
                 if let g = newValue?.glucose { sugarLevel = formatNumber(g) }
                 updateInjectionDoseIfNeeded()
             }
-            .sheet(isPresented: $showInjectionSheet) {
+            .sheet(isPresented: $showInjectionSheet, onDismiss: { showPendingSuccessIfAny() }) {
                 InjectionSheetView(
                     isPresented: $showInjectionSheet,
                     injectionPeriod: $injectionPeriod,
@@ -163,12 +169,13 @@ struct ContentView: View {
                 Button("გაუქმება", role: .cancel) {}
             }
             .sheet(isPresented: $showActivitiesView, onDismiss: {
-                // Ensure newly created registered activities inside ActivitiesView are visible
                 registeredActivities = loadRegisteredActivities(key: registeredActivitiesStorageKey)
+                showPendingSuccessIfAny()
             }) {
                 ActivitiesView(isPresented: $showActivitiesView) { activity in
                     let action = ActivityAction(id: UUID(), date: Date(), activityId: activity.id)
-                    activityHistory.add(action) // persist immediately
+                    activityHistory.add(action)
+                    pendingSuccess = .activity(title: activity.title, effect: activity.averageEffect)
                 }
             }
             .navigationDestination(isPresented: $showSettings) { GeneralSettingsView() }
@@ -316,6 +323,7 @@ struct ContentView: View {
         let action = InjectionAction(id: UUID(), date: Date(), period: injectionPeriod, dose: clamped)
         injectionActions.append(action)
         persistInjectionActions(injectionActions, key: injectionStorageKey)
+        pendingSuccess = .injection(dose: clamped, period: injectionPeriod)
         showInjectionSheet = false
     }
     
@@ -338,16 +346,55 @@ struct ContentView: View {
             if let e = nfcManager.errorMessage { Text(e).font(.caption).foregroundColor(.red) }
         }
     }
+    
+    private func showPendingSuccessIfAny() {
+        guard activeSuccess == nil, let p = pendingSuccess else { return }
+        pendingSuccess = nil
+        activeSuccess = p
+        successHideTask?.cancel()
+        let task = DispatchWorkItem { withAnimation(.easeInOut(duration: 0.25)) { activeSuccess = nil } }
+        successHideTask = task
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0, execute: task)
+    }
+    private var successBannerOverlay: some View {
+        Group {
+            if let success = activeSuccess { successBanner(for: success) }
+        }
+        .animation(.easeInOut(duration: 0.25), value: activeSuccess != nil)
+        .padding(.top, 8)
+    }
+    private func successBanner(for kind: PendingSuccessKind) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: bannerIcon(kind)).foregroundColor(bannerTint(kind))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(bannerTitle(kind)).font(.subheadline).fontWeight(.semibold)
+                Text(bannerSubtitle(kind)).font(.caption2).foregroundColor(.secondary)
+            }
+            Spacer(minLength: 0)
+            Button { withAnimation { activeSuccess = nil } } label: { Image(systemName: "xmark").font(.caption2).padding(6) }
+        }
+        .padding(10)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .padding(.horizontal)
+        .transition(.move(edge: .top).combined(with: .opacity))
+        .shadow(radius: 4, y: 2)
+    }
+    private func bannerIcon(_ kind: PendingSuccessKind) -> String {
+        switch kind { case .injection: return "syringe"; case .activity(_, let effect): return effect > 0 ? "arrow.up.circle.fill" : (effect < 0 ? "arrow.down.circle.fill" : "circle.fill") }
+    }
+    private func bannerTint(_ kind: PendingSuccessKind) -> Color {
+        switch kind { case .injection(_, let period): return period == .daytime ? .orange : .indigo; case .activity(_, let effect): return effectColor(effect) }
+    }
+    private func bannerTitle(_ kind: PendingSuccessKind) -> String {
+        switch kind { case .injection(let dose, _): return "ინექცია შენახულია: " + formatNumber(dose) + " ერთ"; case .activity(let title, _): return "აქტივობა დამატებულია: " + title }
+    }
+    private func bannerSubtitle(_ kind: PendingSuccessKind) -> String {
+        switch kind { case .injection(_, let period): return period.display; case .activity(_, let effect): return (effect > 0 ? "+" : "") + String(effect) }
+    }
 }
 
-#Preview("Light") {
-    NavigationStack { ContentView() }
-}
-
-#Preview("Dark") {
-    NavigationStack { ContentView() }
-        .preferredColorScheme(.dark)
-}
+#Preview("Light") { NavigationStack { ContentView() } }
+#Preview("Dark") { NavigationStack { ContentView() }.preferredColorScheme(.dark) }
 
 private struct MainToolbar: ToolbarContent {
     @Binding var showSettings: Bool

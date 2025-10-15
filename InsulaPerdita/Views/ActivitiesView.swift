@@ -12,8 +12,6 @@ struct ActivitiesView: View {
     @State private var newTitle: String = ""
     @State private var selectedEffect: Int? = nil
     @State private var didLoad = false
-    @State private var showHistoryConfirmation = false
-    @State private var lastAddedActivityTitle: String? = nil
     private let effectOptions: [Int] = activityEffectOptions
     private let storageKey = registeredActivitiesStorageKey
 
@@ -38,7 +36,7 @@ struct ActivitiesView: View {
                             }
                             .padding(.vertical, 4)
                             .contentShape(Rectangle())
-                            .onTapGesture { addActivityToHistoryAndDismiss(activity) }
+                            .onTapGesture { addActivityAndClose(activity) }
                         }
                     }
                 }
@@ -60,27 +58,6 @@ struct ActivitiesView: View {
             .toolbar { if showsCloseButton { ToolbarItem(placement: .cancellationAction) { Button("დახურვა") { isPresented = false } } } }
             .sheet(isPresented: $showAddSheet, onDismiss: resetForm) { addSheet }
             .onAppear { if !didLoad { loadActivities(); didLoad = true } }
-            .overlay(historyConfirmationOverlay, alignment: .top)
-        }
-    }
-
-    private var historyConfirmationOverlay: some View {
-        Group {
-            if showHistoryConfirmation, let title = lastAddedActivityTitle {
-                VStack {
-                    HStack {
-                        Image(systemName: "checkmark.circle.fill").foregroundColor(.green)
-                        Text("\(title) დამატებულია ისტორიაში").font(.subheadline).foregroundColor(.primary)
-                    }
-                    .padding(10)
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(12)
-                    Spacer()
-                }
-                .padding(.top, 24)
-                .transition(.move(edge: .top).combined(with: .opacity))
-                .animation(.easeInOut(duration: 0.2), value: showHistoryConfirmation)
-            }
         }
     }
 
@@ -131,16 +108,16 @@ struct ActivitiesView: View {
 
     private func resetForm() { newTitle = ""; selectedEffect = nil }
 
-    private func addActivityToHistoryAndDismiss(_ activity: RegisteredActivity) {
+    private func addActivityAndClose(_ activity: RegisteredActivity) {
         saveAction(activity)
-        lastAddedActivityTitle = activity.title
-        showHistoryConfirmation = true
-            showHistoryConfirmation = false
-            if showsCloseButton { isPresented = false }
+        #if os(iOS)
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        #endif
+        if showsCloseButton { isPresented = false } else { dismissEnv() }
     }
 
     private func persistActivities() {
-        do { let data = try JSONEncoder().encode(activities); UserDefaults.standard.set(data, forKey: storageKey) } catch { }
+        if let data = try? JSONEncoder().encode(activities) { UserDefaults.standard.set(data, forKey: storageKey) }
     }
     private func loadActivities() {
         guard let data = UserDefaults.standard.data(forKey: storageKey) else { return }
