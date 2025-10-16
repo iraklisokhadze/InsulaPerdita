@@ -191,4 +191,4 @@ struct ActivitiesView: View {
     private func effectColor(_ value: Int) -> Color { value == 0 ? .gray : (value > 0 ? .green : .red) }
 }
 
-#Preview { ActivitiesView(isPresented: .constant(true), saveAction: { _, _ in }) }
+#Preview { ActivitiesView(isPresented: .constant(true), saveAction: { _, _ in }).environmentObject(ActivityHistoryStore()) }

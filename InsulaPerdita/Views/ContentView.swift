@@ -146,8 +146,13 @@ struct ContentView: View {
                 injectionActions = loadInjectionActions(key: injectionStorageKey)
                 activities = loadActivities(key: activitiesStorageKey)
                 registeredActivities = loadRegisteredActivities(key: registeredActivitiesStorageKey)
-                glucoseReadings = loadGlucoseReadings(key: glucoseReadingsStorageKey) // load persisted glucose readings
-                // REMOVE: activityActions = loadActivityActions(key: activityActionsStorageKey)
+                glucoseReadings = loadGlucoseReadings(key: glucoseReadingsStorageKey)
+                // Enable proximity-triggered NFC auto scan
+                nfcManager.enableAutoScanOnProximity()
+            }
+            .onDisappear {
+                // Disable to conserve battery when view goes away
+                nfcManager.disableAutoScanOnProximity()
             }
             .onChange(of: sugarLevel) { _, newValue in
                 autoDismissSugarKeyboardIfNeeded(sugarLevel: newValue, dismiss: dismissSugarKeyboard)
@@ -440,7 +445,7 @@ struct ContentView: View {
         switch kind {
         case .injection(_, let period): return period == .daytime ? .orange : .indigo
         case .activity(_, let effect): return effectColor(effect)
-        case .glucose(let value): return sugarLevelColor
+        case .glucose: return sugarLevelColor // removed unused binding
         }
     }
     private func bannerTitle(_ kind: PendingSuccessKind) -> String {
@@ -459,8 +464,8 @@ struct ContentView: View {
     }
 }
 
-#Preview("Light") { NavigationStack { ContentView() } }
-#Preview("Dark") { NavigationStack { ContentView() }.preferredColorScheme(.dark) }
+#Preview("Light") { NavigationStack { ContentView() }.environmentObject(ActivityHistoryStore()) }
+#Preview("Dark") { NavigationStack { ContentView() }.preferredColorScheme(.dark).environmentObject(ActivityHistoryStore()) }
 
 private struct MainToolbar: ToolbarContent {
     @Binding var showSettings: Bool

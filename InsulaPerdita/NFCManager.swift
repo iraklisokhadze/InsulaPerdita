@@ -1,5 +1,8 @@
 import Foundation
 import SwiftUI
+#if os(iOS)
+import UIKit // for UIDevice proximity monitoring
+#endif
 #if canImport(CoreNFC)
 import CoreNFC
 #endif
@@ -16,6 +19,11 @@ final class NFCManager: NSObject, ObservableObject {
     @Published var isScanning: Bool = false
     @Published var lastReading: SensorReading? = nil
     @Published var errorMessage: String? = nil
+    // NEW: proximity-triggered auto scan flag
+    private var autoScanOnProximityEnabled = false
+    // NEW: cooldown tracking to avoid repeated triggers
+    private var lastProximityTriggeredAt: Date? = nil
+    private let minTriggerInterval: TimeInterval = 5 // seconds between auto scans
 
     // Start an NFC scan for ISO15693 (used by FreeStyle Libre sensors)
     @MainActor
@@ -34,6 +42,45 @@ final class NFCManager: NSObject, ObservableObject {
         #else
         errorMessage = "CoreNFC not supported in this build context"
         #endif
+    }
+
+    // NEW: Enable automatic NFC scan when proximity sensor (near front camera) is covered.
+    // This uses UIDevice proximity monitoring; when proximityState becomes true we trigger a scan if not already scanning.
+    func enableAutoScanOnProximity() {
+        #if os(iOS)
+        guard !autoScanOnProximityEnabled else { return }
+        autoScanOnProximityEnabled = true
+        UIDevice.current.isProximityMonitoringEnabled = true
+        NotificationCenter.default.addObserver(self, selector: #selector(handleProximityChange), name: UIDevice.proximityStateDidChangeNotification, object: nil)
+        #endif
+    }
+    func disableAutoScanOnProximity() {
+        #if os(iOS)
+        guard autoScanOnProximityEnabled else { return }
+        autoScanOnProximityEnabled = false
+        NotificationCenter.default.removeObserver(self, name: UIDevice.proximityStateDidChangeNotification, object: nil)
+        UIDevice.current.isProximityMonitoringEnabled = false
+        #endif
+    }
+    @objc private func handleProximityChange() {
+        #if os(iOS)
+        guard autoScanOnProximityEnabled else { return }
+        // Only start when sensor reports close (true), not already scanning
+        if UIDevice.current.proximityState {
+            let now = Date()
+            if let last = lastProximityTriggeredAt, now.timeIntervalSince(last) < minTriggerInterval { return }
+            Task { @MainActor in
+                if !isScanning {
+                    lastProximityTriggeredAt = now
+                    startScan()
+                }
+            }
+        }
+        #endif
+    }
+
+    deinit {
+        disableAutoScanOnProximity()
     }
 
     // MARK: - Private
