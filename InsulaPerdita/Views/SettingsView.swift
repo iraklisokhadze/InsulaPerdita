@@ -96,8 +96,8 @@ struct GeneralSettingsView: View { // renamed from SettingsView
 private struct ActivitiesWrapper: View { // supplies required params for ActivitiesView when navigated
     @EnvironmentObject var activityHistory: ActivityHistoryStore
     var body: some View {
-        ActivitiesView(isPresented: .constant(true), saveAction: { activity in
-            let action = ActivityAction(id: UUID(), date: Date(), activityId: activity.id)
+        ActivitiesView(isPresented: .constant(true), saveAction: { activity, chosenDate in
+            let action = ActivityAction(id: UUID(), date: chosenDate, activityId: activity.id)
             activityHistory.add(action)
         }, showsCloseButton: false)
     }

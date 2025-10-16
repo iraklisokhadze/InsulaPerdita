@@ -15,3 +15,18 @@ struct InsulaPerditaTests {
     }
 
 }
+
+import XCTest
+@testable import InsulaPerdita
+
+final class GlucosePersistenceTests: XCTestCase {
+    func testPersistAndLoadGlucoseReadings() throws {
+        let key = glucoseReadingsStorageKey
+        let initial: [GlucoseReadingAction] = [GlucoseReadingAction(id: UUID(), date: Date(), value: 5.6)]
+        persistGlucoseReadings(initial, key: key)
+        let loaded = loadGlucoseReadings(key: key)
+        XCTAssertEqual(loaded.count, 1)
+        guard let first = loaded.first else { return XCTFail("No readings loaded") }
+        XCTAssertEqual(first.value, 5.6, accuracy: 0.0001)
+    }
+}

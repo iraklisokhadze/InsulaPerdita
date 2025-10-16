@@ -5,6 +5,7 @@ struct ActionsHistorySectionView: View {
     @Binding var activities: [Activity]
     @Binding var activityActions: [ActivityAction]
     @Binding var registeredActivities: [RegisteredActivity]
+    @Binding var glucoseReadings: [GlucoseReadingAction]
     @Binding var showDeleteConfirm: Bool
     @Binding var pendingDeleteId: String?
 
@@ -66,7 +67,7 @@ struct ActionsHistorySectionView: View {
     // MARK: - Build unified actions
     private func buildUnifiedActions() -> [UnifiedAction] {
         var unified: [UnifiedAction] = []
-        unified.reserveCapacity(injectionActions.count + activities.count + activityActions.count)
+        unified.reserveCapacity(injectionActions.count + activities.count + activityActions.count + glucoseReadings.count)
         for inj in injectionActions { // include deleted
             unified.append(UnifiedAction(
                 id: "inj-" + inj.id.uuidString,
@@ -76,6 +77,17 @@ struct ActionsHistorySectionView: View {
                 primaryLine: "ინექცია • " + formatNumber(inj.dose) + " ერთ",
                 secondaryLine: inj.period.display + " • " + formatDate(inj.date),
                 isDeleted: inj.deletedAt != nil
+            ))
+        }
+        for reading in glucoseReadings {
+            unified.append(UnifiedAction(
+                id: "gluc-" + reading.id.uuidString,
+                date: reading.date,
+                icon: "drop",
+                tint: .blue,
+                primaryLine: "შაქარი • " + formatNumber(reading.value) + " მმოლ/ლ",
+                secondaryLine: formatDate(reading.date),
+                isDeleted: reading.deletedAt != nil
             ))
         }
         for act in activities { // legacy ad-hoc
@@ -123,6 +135,12 @@ struct ActionsHistorySectionView: View {
                 if injectionActions[idx].deletedAt == nil { injectionActions[idx].deletedAt = now }
                 persistInjectionActions(injectionActions, key: injectionStorageKey)
             }
+        } else if id.hasPrefix("gluc-") {
+            let uuidString = String(id.dropFirst(5))
+            if let uuid = UUID(uuidString: uuidString), let idx = glucoseReadings.firstIndex(where: { $0.id == uuid }) {
+                if glucoseReadings[idx].deletedAt == nil { glucoseReadings[idx].deletedAt = now }
+                persistGlucoseReadings(glucoseReadings, key: glucoseReadingsStorageKey)
+            }
         } else if id.hasPrefix("regact-") {
             let uuidString = String(id.dropFirst(7))
             if let uuid = UUID(uuidString: uuidString), let idx = activityActions.firstIndex(where: { $0.id == uuid }) {
@@ -145,6 +163,12 @@ struct ActionsHistorySectionView: View {
                 injectionActions[idx].deletedAt = nil
                 persistInjectionActions(injectionActions, key: injectionStorageKey)
             }
+        } else if id.hasPrefix("gluc-") {
+            let uuidString = String(id.dropFirst(5))
+            if let uuid = UUID(uuidString: uuidString), let idx = glucoseReadings.firstIndex(where: { $0.id == uuid }) {
+                glucoseReadings[idx].deletedAt = nil
+                persistGlucoseReadings(glucoseReadings, key: glucoseReadingsStorageKey)
+            }
         } else if id.hasPrefix("regact-") {
             let uuidString = String(id.dropFirst(7))
             if let uuid = UUID(uuidString: uuidString), let idx = activityActions.firstIndex(where: { $0.id == uuid }) {
@@ -162,12 +186,13 @@ struct ActionsHistorySectionView: View {
 }
 
 #Preview {
-    StatefulPreviewWrapper((sampleInjections(), sampleActivities(), sampleActivityActions(), sampleRegisteredActivities())) { injBinding, actsBinding, actActionsBinding, regActsBinding in
+    StatefulPreviewWrapper((sampleInjections(), sampleActivities(), sampleActivityActions(), sampleRegisteredActivities(), sampleGlucoseReadings())) { injBinding, actsBinding, actActionsBinding, regActsBinding, glucBinding in
         ActionsHistorySectionView(
             injectionActions: injBinding,
             activities: actsBinding,
             activityActions: actActionsBinding,
             registeredActivities: regActsBinding,
+            glucoseReadings: glucBinding,
             showDeleteConfirm: .constant(false),
             pendingDeleteId: .constant(nil)
         )
@@ -188,20 +213,25 @@ private func sampleActivityActions() -> [ActivityAction] {
 private func sampleRegisteredActivities() -> [RegisteredActivity] {
     [RegisteredActivity(id: UUID(), title: "ვარჯიში", averageEffect: -100)]
 }
+private func sampleGlucoseReadings() -> [GlucoseReadingAction] {
+    [GlucoseReadingAction(id: UUID(), date: Date().addingTimeInterval(-300), value: 7.2)]
+}
 
 // Generic stateful wrapper for previews
-struct StatefulPreviewWrapper<A, B, C, D, Content: View>: View {
+struct StatefulPreviewWrapper<A, B, C, D, E, Content: View>: View { // updated for 5 bindings
     @State var a: A
     @State var b: B
     @State var c: C
     @State var d: D
-    let content: (Binding<A>, Binding<B>, Binding<C>, Binding<D>) -> Content
-    init(_ values: (A, B, C, D), content: @escaping (Binding<A>, Binding<B>, Binding<C>, Binding<D>) -> Content) {
+    @State var e: E
+    let content: (Binding<A>, Binding<B>, Binding<C>, Binding<D>, Binding<E>) -> Content
+    init(_ values: (A, B, C, D, E), content: @escaping (Binding<A>, Binding<B>, Binding<C>, Binding<D>, Binding<E>) -> Content) {
         _a = State(initialValue: values.0)
         _b = State(initialValue: values.1)
         _c = State(initialValue: values.2)
         _d = State(initialValue: values.3)
+        _e = State(initialValue: values.4)
         self.content = content
     }
-    var body: some View { content($a, $b, $c, $d) }
+    var body: some View { content($a, $b, $c, $d, $e) }
 }

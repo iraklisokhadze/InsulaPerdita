@@ -1,9 +1,43 @@
 import SwiftUI
 
+// New time offset enum for activity timestamp selection
+private enum ActivityTimeOffset: CaseIterable, Identifiable {
+    case minus60
+    case minus30
+    case now
+    case plus30
+    var id: Self { self }
+    var minutes: Int {
+        switch self {
+        case .minus60: return -60
+        case .minus30: return -30
+        case .now: return 0
+        case .plus30: return 30
+        }
+    }
+    var display: String {
+        switch self {
+        case .minus60: return "1 საათის წინ"
+        case .minus30: return "30 წთ წინ"
+        case .now: return "ახლა"
+        case .plus30: return "30 წთ შემდეგ"
+        }
+    }
+    var icon: String {
+        switch self {
+        case .minus60: return "clock.arrow.circlepath"
+        case .minus30: return "clock.arrow.circlepath"
+        case .now: return "clock"
+        case .plus30: return "clock.badge.plus"
+        }
+    }
+}
+
 struct ActivitiesView: View {
     // Presentation binding (used when shown as sheet). If used in navigation push, pass .constant(true) and set showsCloseButton=false.
     @Binding var isPresented: Bool
-    let saveAction: (RegisteredActivity) -> Void
+    // Updated: include chosen date
+    let saveAction: (RegisteredActivity, Date) -> Void
     var showsCloseButton: Bool = true
     @Environment(\.dismiss) private var dismissEnv
     @State private var activities: [RegisteredActivity] = []
@@ -14,10 +48,14 @@ struct ActivitiesView: View {
     @State private var didLoad = false
     private let effectOptions: [Int] = activityEffectOptions
     private let storageKey = registeredActivitiesStorageKey
+    // New: selected time offset
+    @State private var selectedOffset: ActivityTimeOffset = .now
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                // Time offset picker chips
+                offsetPicker
                 List {
                     if activities.isEmpty {
                         Text("აქტივობები ჯერ არ არის").foregroundColor(.secondary)
@@ -58,6 +96,30 @@ struct ActivitiesView: View {
             .toolbar { if showsCloseButton { ToolbarItem(placement: .cancellationAction) { Button("დახურვა") { isPresented = false } } } }
             .sheet(isPresented: $showAddSheet, onDismiss: resetForm) { addSheet }
             .onAppear { if !didLoad { loadActivities(); didLoad = true } }
+        }
+    }
+
+    // Picker for time offset
+    private var offsetPicker: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(ActivityTimeOffset.allCases) { option in
+                    let isSelected = option == selectedOffset
+                    HStack(spacing: 6) {
+                        Image(systemName: option.icon).font(.caption)
+                        Text(option.display).font(.caption2)
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .background(isSelected ? Color.accentColor : Color(.systemGray5))
+                    .foregroundColor(isSelected ? .white : .primary)
+                    .clipShape(Capsule())
+                    .onTapGesture { withAnimation(.easeInOut(duration: 0.15)) { selectedOffset = option } }
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+                }
+            }
+            .padding(.vertical, 8)
+            .padding(.horizontal)
         }
     }
 
@@ -109,7 +171,9 @@ struct ActivitiesView: View {
     private func resetForm() { newTitle = ""; selectedEffect = nil }
 
     private func addActivityAndClose(_ activity: RegisteredActivity) {
-        saveAction(activity)
+        let offsetMinutes = selectedOffset.minutes
+        let date = Calendar.current.date(byAdding: .minute, value: offsetMinutes, to: Date()) ?? Date()
+        saveAction(activity, date)
         #if os(iOS)
         UINotificationFeedbackGenerator().notificationOccurred(.success)
         #endif
@@ -127,4 +191,4 @@ struct ActivitiesView: View {
     private func effectColor(_ value: Int) -> Color { value == 0 ? .gray : (value > 0 ? .green : .red) }
 }
 
-#Preview { ActivitiesView(isPresented: .constant(true), saveAction: { _ in }) }
+#Preview { ActivitiesView(isPresented: .constant(true), saveAction: { _, _ in }) }

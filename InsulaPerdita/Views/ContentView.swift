@@ -19,6 +19,7 @@ struct ContentView: View {
     @State private var injectionDose: Double = 0.5
     @State private var injectionPeriod: InjectionPeriod = .daytime
     @State private var injectionActions: [InjectionAction] = []
+    @State private var glucoseReadings: [GlucoseReadingAction] = [] // ensure state exists
     @State private var injectionDoseWasManuallyChanged: Bool = false
     @FocusState private var sugarFieldFocused: Bool
     
@@ -75,10 +76,26 @@ struct ContentView: View {
     }
     
     // Injection dose bounds
-    private var injectionMinDose: Double { 0.5 }
+    private var injectionMinDose: Double {
+        if let remaining = injectionRemainingDailyDose, remaining < 0.5 { return 0 } // allow zero when remaining daily dose is low
+        return 0.5
+    }
     private var injectionDailyDose: Double? { (weightValue ?? 0) > 0 ? (weightValue! * sensitivity.factor) : nil }
+    // Total dose already injected today (excluding soft-deleted)
+    private var dailyInjectedDoseSoFar: Double {
+        injectionActions.filter { $0.deletedAt == nil && Calendar.current.isDateInToday($0.date) }.reduce(0) { $0 + $1.dose }
+    }
+    // Remaining daily dose allowed today (can be negative if exceeded)
+    private var injectionRemainingDailyDose: Double? {
+        guard let dd = injectionDailyDose else { return nil }
+        return dd - dailyInjectedDoseSoFar
+    }
     private var injectionMaxDose: Double {
-        if let dd = injectionDailyDose { return max(injectionMinDose, dd / 2.0) }
+        if let remaining = injectionRemainingDailyDose {
+            // Floor remaining to nearest 0.5 step to keep clamp/round symmetric and avoid overshoot
+            let stepped = floor(max(0, remaining) * 2) / 2
+            return stepped
+        }
         if let rec = recommendedDose { return max(injectionMinDose, rec) }
         return injectionMinDose
     }
@@ -102,7 +119,7 @@ struct ContentView: View {
     
     @EnvironmentObject var activityHistory: ActivityHistoryStore
     // Success banner state
-    private enum PendingSuccessKind: Equatable { case injection(dose: Double, period: InjectionPeriod); case activity(title: String, effect: Int) }
+    private enum PendingSuccessKind: Equatable { case injection(dose: Double, period: InjectionPeriod); case activity(title: String, effect: Int); case glucose(value: Double) }
     @State private var pendingSuccess: PendingSuccessKind? = nil
     @State private var activeSuccess: PendingSuccessKind? = nil
     @State private var successHideTask: DispatchWorkItem? = nil
@@ -118,7 +135,7 @@ struct ContentView: View {
     
     // Extracted from previous body chain to reduce generic nesting complexity
     private var rootContent: some View {
-        ScrollView(.vertical, showsIndicators: true) { // disambiguated explicit init
+        ScrollView(.vertical, showsIndicators: true) {
             mainVStack
         }
             .simultaneousGesture(TapGesture().onEnded { if sugarFieldFocused { dismissSugarKeyboard() } })
@@ -129,18 +146,30 @@ struct ContentView: View {
                 injectionActions = loadInjectionActions(key: injectionStorageKey)
                 activities = loadActivities(key: activitiesStorageKey)
                 registeredActivities = loadRegisteredActivities(key: registeredActivitiesStorageKey)
+                glucoseReadings = loadGlucoseReadings(key: glucoseReadingsStorageKey) // load persisted glucose readings
                 // REMOVE: activityActions = loadActivityActions(key: activityActionsStorageKey)
             }
-            .onChange(of: sugarLevel) { newValue in
+            .onChange(of: sugarLevel) { _, newValue in
                 autoDismissSugarKeyboardIfNeeded(sugarLevel: newValue, dismiss: dismissSugarKeyboard)
                 updateInjectionDoseIfNeeded()
             }
-            .onChange(of: selectedTrend) { newValue in
+            .onChange(of: selectedTrend) { _, _ in
                 updateInjectionDoseIfNeeded()
             }
-            .onChange(of: nfcManager.lastReading) { newValue in
+            .onChange(of: nfcManager.lastReading) { _, newValue in
                 if let g = newValue?.glucose { sugarLevel = formatNumber(g) }
                 updateInjectionDoseIfNeeded()
+            }
+            // NEW: apply nightly preset automatically when toggling to nighttime period
+            .onChange(of: injectionPeriod) { _, newValue in
+                if newValue == .nighttime {
+                    injectionDoseWasManuallyChanged = true
+                    let preset = Double(nightDoseSetting)
+                    injectionDose = clampDose(preset, minValue: injectionMinDose, maxValue: injectionMaxDose)
+                } else {
+                    injectionDoseWasManuallyChanged = false
+                    updateInjectionDoseIfNeeded()
+                }
             }
             .sheet(isPresented: $showInjectionSheet, onDismiss: { showPendingSuccessIfAny() }) {
                 InjectionSheetView(
@@ -172,8 +201,8 @@ struct ContentView: View {
                 registeredActivities = loadRegisteredActivities(key: registeredActivitiesStorageKey)
                 showPendingSuccessIfAny()
             }) {
-                ActivitiesView(isPresented: $showActivitiesView) { activity in
-                    let action = ActivityAction(id: UUID(), date: Date(), activityId: activity.id)
+                ActivitiesView(isPresented: $showActivitiesView) { activity, chosenDate in
+                    let action = ActivityAction(id: UUID(), date: chosenDate, activityId: activity.id)
                     activityHistory.add(action)
                     pendingSuccess = .activity(title: activity.title, effect: activity.averageEffect)
                 }
@@ -196,22 +225,34 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("შაქრის დონე")
-                GeometryReader { geo in
-                    TextField("მმოლ/ლ", text: $sugarLevel)
-                        .keyboardType(.decimalPad)
-                        .focused($sugarFieldFocused)
-                        .font(.system(size: 18, weight: .semibold))
-                        .padding(.vertical, 3)
-                        .padding(.horizontal, 4)
-                        .frame(width: geo.size.width * 0.9, alignment: .leading)
-                        .foregroundColor(sugarLevelColor)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8)
-                                .stroke(sugarLevel.isEmpty ? Color.secondary.opacity(0.3) : sugarLevelColor, lineWidth: 1)
-                        )
-                        .textFieldStyle(.roundedBorder)
+                HStack(spacing: 6) {
+                    GeometryReader { geo in
+                        TextField("მმოლ/ლ", text: $sugarLevel)
+                            .keyboardType(.decimalPad)
+                            .focused($sugarFieldFocused)
+                            .font(.system(size: 18, weight: .semibold))
+                            .padding(.vertical, 3)
+                            .padding(.horizontal, 4)
+                            .frame(width: geo.size.width * 0.9, alignment: .leading)
+                            .foregroundColor(sugarLevelColor)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(sugarLevel.isEmpty ? Color.secondary.opacity(0.3) : sugarLevelColor, lineWidth: 1)
+                            )
+                            .textFieldStyle(.roundedBorder)
+                    }
+                    .frame(height: 52)
+                    if let val = sugarLevelValue, val > 0 {
+                        Button { acceptGlucoseReading(val) } label: {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 28))
+                                .foregroundColor(.accentColor)
+                                .accessibilityLabel("შენახვა")
+                        }
+                        .buttonStyle(.plain)
+                        .transition(.scale.combined(with: .opacity))
+                    }
                 }
-                .frame(height: 52) // fixed height so GeometryReader has layout
             }
         }
     }
@@ -253,6 +294,7 @@ struct ContentView: View {
             activities: $activities,
             activityActions: $activityHistory.activityActions,
             registeredActivities: $registeredActivities,
+            glucoseReadings: $glucoseReadings,
             showDeleteConfirm: $showDeleteConfirm,
             pendingDeleteId: $pendingDeleteId
         )
@@ -326,6 +368,14 @@ struct ContentView: View {
         pendingSuccess = .injection(dose: clamped, period: injectionPeriod)
         showInjectionSheet = false
     }
+    private func acceptGlucoseReading(_ value: Double) {
+        let action = GlucoseReadingAction(id: UUID(), date: Date(), value: value)
+        glucoseReadings.append(action)
+        persistGlucoseReadings(glucoseReadings, key: glucoseReadingsStorageKey)
+        pendingSuccess = .glucose(value: value)
+        dismissSugarKeyboard()
+        showPendingSuccessIfAny()
+    }
     
     // MARK: - Hide Keyboard
     private func dismissSugarKeyboard() { sugarFieldFocused = false }
@@ -380,16 +430,32 @@ struct ContentView: View {
         .shadow(radius: 4, y: 2)
     }
     private func bannerIcon(_ kind: PendingSuccessKind) -> String {
-        switch kind { case .injection: return "syringe"; case .activity(_, let effect): return effect > 0 ? "arrow.up.circle.fill" : (effect < 0 ? "arrow.down.circle.fill" : "circle.fill") }
+        switch kind {
+        case .injection: return "syringe"
+        case .activity(_, let effect): return effect > 0 ? "arrow.up.circle.fill" : (effect < 0 ? "arrow.down.circle.fill" : "circle.fill")
+        case .glucose: return "drop"
+        }
     }
     private func bannerTint(_ kind: PendingSuccessKind) -> Color {
-        switch kind { case .injection(_, let period): return period == .daytime ? .orange : .indigo; case .activity(_, let effect): return effectColor(effect) }
+        switch kind {
+        case .injection(_, let period): return period == .daytime ? .orange : .indigo
+        case .activity(_, let effect): return effectColor(effect)
+        case .glucose(let value): return sugarLevelColor
+        }
     }
     private func bannerTitle(_ kind: PendingSuccessKind) -> String {
-        switch kind { case .injection(let dose, _): return "ინექცია შენახულია: " + formatNumber(dose) + " ერთ"; case .activity(let title, _): return "აქტივობა დამატებულია: " + title }
+        switch kind {
+        case .injection(let dose, _): return "ინექცია შენახულია: " + formatNumber(dose) + " ერთ"
+        case .activity(let title, _): return "აქტივობა დამატებულია: " + title
+        case .glucose(let value): return "შენახულია: " + formatNumber(value) + " მმოლ/ლ"
+        }
     }
     private func bannerSubtitle(_ kind: PendingSuccessKind) -> String {
-        switch kind { case .injection(_, let period): return period.display; case .activity(_, let effect): return (effect > 0 ? "+" : "") + String(effect) }
+        switch kind {
+        case .injection(_, let period): return period.display
+        case .activity(_, let effect): return (effect > 0 ? "+" : "") + String(effect)
+        case .glucose: return formatDate(Date())
+        }
     }
 }
 

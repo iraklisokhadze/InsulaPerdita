@@ -77,3 +77,14 @@ func loadInjectionActions(key: String) -> [InjectionAction] {
     guard let data = UserDefaults.standard.data(forKey: key) else { return [] }
     return (try? JSONDecoder().decode([InjectionAction].self, from: data)) ?? []
 }
+
+func persistGlucoseReadings(_ readings: [GlucoseReadingAction], key: String) {
+    if let data = try? JSONEncoder().encode(readings) {
+        UserDefaults.standard.set(data, forKey: key)
+    }
+}
+
+func loadGlucoseReadings(key: String) -> [GlucoseReadingAction] {
+    guard let data = UserDefaults.standard.data(forKey: key) else { return [] }
+    return (try? JSONDecoder().decode([GlucoseReadingAction].self, from: data)) ?? []
+}

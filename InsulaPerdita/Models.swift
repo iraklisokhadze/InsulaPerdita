@@ -58,10 +58,18 @@ struct UnifiedAction: Identifiable {
     let isDeleted: Bool // new flag for soft delete state
 }
 
+struct GlucoseReadingAction: Identifiable, Codable {
+    let id: UUID
+    var date: Date
+    var value: Double
+    var deletedAt: Date? = nil
+}
+
 // Constants
 let registeredActivitiesStorageKey = "RegisteredActivitiesStore.v1"
 let activityActionsStorageKey = "ActivityActionsStore.v1"
 let activitiesStorageKey = "ActivitiesStore.v1"
 let injectionStorageKey = "injectionActions.v1"
+let glucoseReadingsStorageKey = "GlucoseReadingsStore.v1"
 let doseStep: Double = 0.5
 let activityEffectOptions: [Int] = [-150,-100,-50,50,100,150]
