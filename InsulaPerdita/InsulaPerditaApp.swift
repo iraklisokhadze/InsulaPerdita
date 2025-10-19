@@ -2,11 +2,14 @@ import SwiftUI
 
 @main
 struct InsulaPerditaApp: App {
-    @StateObject private var activityHistoryStore = ActivityHistoryStore()
+    @StateObject private var activityHistory = ActivityHistoryStore()
+    @StateObject private var nfcManager = NFCManager()
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environmentObject(activityHistoryStore)
+            RootView()
+                .environmentObject(activityHistory)
+                .environmentObject(nfcManager)
         }
     }
 }

@@ -3,6 +3,7 @@ import SwiftUI
 struct NFCSectionView: View {
     @ObservedObject var nfcManager: NFCManager
     let formatNumber: (Double) -> String
+    let onNewReading: (Double) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -26,10 +27,13 @@ struct NFCSectionView: View {
                 Text(e).font(.caption).foregroundColor(.red)
             }
         }
+        .onChange(of: nfcManager.lastReading) { _, newValue in
+            if let g = newValue?.glucose { onNewReading(g) }
+        }
     }
 }
 
 #Preview {
-    NFCSectionView(nfcManager: NFCManager(), formatNumber: { String(format: "%.1f", $0) })
+    NFCSectionView(nfcManager: NFCManager(), formatNumber: { String(format: "%.1f", $0) }, onNewReading: { _ in })
         .padding()
 }

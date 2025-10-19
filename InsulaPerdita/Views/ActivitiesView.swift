@@ -28,7 +28,7 @@ private enum ActivityTimeOffset: CaseIterable, Identifiable {
         case .minus60: return "clock.arrow.circlepath"
         case .minus30: return "clock.arrow.circlepath"
         case .now: return "clock"
-        case .plus30: return "clock.badge.plus"
+        case .plus30: return "goforward"
         }
     }
 }
