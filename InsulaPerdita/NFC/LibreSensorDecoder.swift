@@ -1,4 +1,9 @@
+// Moved to NFC/ folder
+// Original file path: InsulaPerdita/LibreSensorDecoder.swift
+
 import Foundation
+
+// --- Original content below ---
 
 /// Heuristic decoder for FreeStyle Libre raw blocks (Experimental / NOT for medical decisions!)
 /// Current focus: provide raw memory insight + safe plausibility filtering while a proper
@@ -35,35 +40,23 @@ import Foundation
 enum LibreSensorDecoder {
     static func decode(blocks: [Data]) -> SensorReading { decode(blocks: blocks, verbose: false) }
 
-    // Added: warm-up & sensor age heuristic derivation
     private static func deriveSensorAge(from block0: Data, verbose: Bool) -> (ageMinutes: Int?, warmupRemaining: Int?, isWarmup: Bool, reason: String?) {
         #if DEBUG
         func dlog(_ msg: String) { if verbose { print("[LibreDecoder] " + msg) } }
         #else
-        func dlog(_ msg: String) { /* no-op */ }
+        func dlog(_ msg: String) { }
         #endif
         guard block0.count >= 6 else { dlog("Block0 too short for age heuristic (") ; return (nil,nil,false,nil) }
-        // Candidate interpretations (spec unknown, exploratory):
-        // 1. Little-endian UInt16 at bytes 0-1
         let le01 = Int((UInt16(block0[1]) << 8) | UInt16(block0[0]))
-        // 2. Big-endian UInt16 at bytes 0-1
         let be01 = Int((UInt16(block0[0]) << 8) | UInt16(block0[1]))
-        // 3. Little-endian UInt16 at bytes 2-3
         let le23 = Int((UInt16(block0[3]) << 8) | UInt16(block0[2]))
-        // 4. Big-endian UInt16 at bytes 2-3
         let be23 = Int((UInt16(block0[2]) << 8) | UInt16(block0[3]))
-        // Collect plausible minute values (0.. (14 days * 24 * 60)=20160)
         let maxMinutes = 14 * 24 * 60
-        var candidates: [(label: String, value: Int)] = []
-        for (label,val) in [("le01",le01),("be01",be01),("le23",le23),("be23",be23)] {
-            if (0...maxMinutes).contains(val) { candidates.append((label,val)) }
-        }
-        // Heuristic selection: choose the largest plausible (assuming some counters increment)
-        let chosen = candidates.max(by: { $0.value < $1.value })
-        if let chosen = chosen { dlog("Sensor age heuristic candidates: le01=\(le01), be01=\(be01), le23=\(le23), be23=\(be23) -> chosen=\(chosen.label)=\(chosen.value) min") }
-        else { dlog("No plausible sensor age candidate among le01=\(le01), be01=\(be01), le23=\(le23), be23=\(be23)") }
-        guard let age = chosen?.value else { return (nil,nil,false,"noPlausibleAgeCandidate") }
-        // Warm-up: assume first 60 minutes considered warm-up
+        var candidates: [(String, Int)] = []
+        for (label,val) in [("le01",le01),("be01",be01),("le23",le23),("be23",be23)] { if (0...maxMinutes).contains(val) { candidates.append((label,val)) } }
+        let chosen = candidates.max { $0.1 < $1.1 }
+        if let chosen = chosen { dlog("Sensor age heuristic candidates: le01=\(le01), be01=\(be01), le23=\(le23), be23=\(be23) -> chosen=\(chosen.0)=\(chosen.1) min") } else { dlog("No plausible sensor age candidate among le01=\(le01), be01=\(be01), le23=\(le23), be23=\(be23)") }
+        guard let age = chosen?.1 else { return (nil,nil,false,"noPlausibleAgeCandidate") }
         let warmupThreshold = 60
         let isWarmup = age < warmupThreshold
         let remaining = isWarmup ? (warmupThreshold - age) : nil
@@ -74,9 +67,8 @@ enum LibreSensorDecoder {
         #if DEBUG
         func dlog(_ msg: String) { if verbose { print("[LibreDecoder] " + msg) } }
         #else
-        func dlog(_ msg: String) { /* no-op */ }
+        func dlog(_ msg: String) { }
         #endif
-
         dlog("Decoding start. Blocks count = \(blocks.count)")
         var meta: [String: String] = [:]
         guard blocks.count >= 43 else {
@@ -92,19 +84,16 @@ enum LibreSensorDecoder {
         let state = blocks[0][4]
         meta["sensorStateHex"] = String(format: "%02X", state)
         dlog("Sensor state: 0x\(String(format: "%02X", state))")
-        // Sensor age & warm-up detection
         let ageResult = deriveSensorAge(from: blocks[0], verbose: verbose)
         if let age = ageResult.ageMinutes { meta["sensorAgeMinutes"] = String(age) }
         if let remain = ageResult.warmupRemaining { meta["warmupRemainingMinutes"] = String(remain) }
         meta["isWarmup"] = ageResult.isWarmup ? "true" : "false"
         if let reason = ageResult.reason { meta["sensorAgeReason"] = reason }
-
         let trendIndex = Int(blocks[3][3] & 0x1F)
         let historyIndex = Int(blocks[3][4])
         meta["trendIndex"] = String(trendIndex)
         meta["historyIndex"] = String(historyIndex)
         dlog("Trend index: \(trendIndex), History index: \(historyIndex)")
-
         let trendBlockIndex = 26 + (trendIndex % 16)
         meta["selectedTrendBlock"] = String(trendBlockIndex)
         dlog("Calculated trend block index: \(trendBlockIndex)")
@@ -119,61 +108,27 @@ enum LibreSensorDecoder {
             meta["discardReason"] = "trendBlockTooShort"
             return SensorReading(timestamp: Date(), glucose: nil, rawBlocks: blocks, trend: .unknown, meta: meta)
         }
-
         let raw16 = (UInt16(trendBlock[1]) << 8) | UInt16(trendBlock[0])
         meta["raw16"] = String(raw16)
-
-        // The last 14 bits of the first two bytes of the trend block represent the current glucose value.
-        // The value is masked with 0x1FFF instead of 0x3FFF.
         let rawGlucose = Double(raw16 & 0x1FFF)
-
-        // The trend is in the 4th byte.
         let trend = Trend(rawValue: trendBlock[3] & 0x7F)
-
-        // Load calibration
-        let calibrationKey = "sensorCalibration"
-        var calibration = Calibration() // Default calibration
-        if let data = UserDefaults.standard.data(forKey: calibrationKey),
-           let decoded = try? JSONDecoder().decode(Calibration.self, from: data) {
-            calibration = decoded
-        }
-
+        var calibration = Calibration()
+        if let data = UserDefaults.standard.data(forKey: "sensorCalibration"), let decoded = try? JSONDecoder().decode(Calibration.self, from: data) { calibration = decoded }
         var glucose: Double? = nil
-        var scaling: String = "none"
-
+        var scaling = "none"
         if calibration.isCalibrated {
-            let calibratedGlucose = (rawGlucose * calibration.slope) + calibration.intercept
-            dlog("Applied calibration: (\(rawGlucose) * \(calibration.slope)) + \(calibration.intercept) = \(calibratedGlucose)")
-            if (40...500).contains(calibratedGlucose) {
-                glucose = calibratedGlucose
-                scaling = "calibrated"
-            } else {
-                dlog("Calibrated value \(calibratedGlucose) is out of plausible range.")
-                meta["discardReason"] = "calibratedValueOutOfRange"
-            }
+            let calibrated = (rawGlucose * calibration.slope) + calibration.intercept
+            dlog("Applied calibration: (\(rawGlucose) * \(calibration.slope)) + \(calibration.intercept) = \(calibrated)")
+            if (40...500).contains(calibrated) { glucose = calibrated; scaling = "calibrated" } else { meta["discardReason"] = "calibratedValueOutOfRange" }
         } else {
-            // Plausibility checks (fallback if not calibrated)
-            let plausibleValues: [(Double, String)] = [
-                (rawGlucose / 10.0, "/10"),
-                (rawGlucose, "*1")
-            ]
-            for (value, scale) in plausibleValues {
-                if (40...500).contains(value) {
-                    glucose = value
-                    scaling = scale
-                    break
-                }
-            }
+            for (value, scale) in [(rawGlucose/10.0,"/10"),(rawGlucose,"*1")] { if (40...500).contains(value) { glucose = value; scaling = scale; break } }
             if glucose == nil { meta["discardReason"] = "outOfRangeRawValue" }
         }
-
         meta["appliedScaling"] = scaling
         meta["plausible"] = glucose == nil ? "false" : "true"
         if glucose == nil && meta["discardReason"] == nil { meta["discardReason"] = "unknown" }
-
         meta["trendArrowValue"] = String(Int(trendBlock[3] & 0x7F))
         meta["trendArrowRaw"] = String(Int(trendBlock[3]))
-
         return SensorReading(timestamp: Date(), glucose: glucose, rawBlocks: blocks, trend: trend, meta: meta)
     }
 }
